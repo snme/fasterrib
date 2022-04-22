@@ -2,6 +2,10 @@
 
 # Setup
 
+## Install Miniconda
+
+If you don't already have `conda`, please find the install instructions [here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html#regular-installation).
+
 ## Create the conda environment
 
 ```bash
