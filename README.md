@@ -20,6 +20,7 @@ data/
       labels
         all/
           RibFrac1-label.nii.gz
+          ...
     validation/
       ribfrac-val-images/
           RibFrac421-image.nii.gz
