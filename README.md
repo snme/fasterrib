@@ -2,7 +2,13 @@
 
 # Setup
 
-## Download the Data
+## Create the conda environment
+
+```bash
+conda env create -f env.yml
+```
+
+## Download the data
 
 Download the RibFrac challenge training and validation data, then extract and move the files to
 a folder named `data/ribfrac-challenge` in the root of this repo.
