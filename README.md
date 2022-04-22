@@ -17,7 +17,7 @@ data/
         all/
           RibFrac1-image.nii.gz
           ...
-      labels
+      labels/
         all/
           RibFrac1-label.nii.gz
           ...
