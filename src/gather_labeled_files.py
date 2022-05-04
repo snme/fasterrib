@@ -21,7 +21,8 @@ def main(args):
     labels_file = args.labels
 
     filename_to_path = {}
-    for path in Path(search_dir).rglob("*.py"):
+    for path in Path(search_dir).rglob("*.tgz"):
+        print(path)
         filename_to_path[path.name] = str(path.absolute())
 
     with open(labels_file, newline="") as f:
