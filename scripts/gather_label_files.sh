@@ -8,6 +8,6 @@ cd $DIR/..
 
 # To be run on Sherlock
 python -m src.gather_labeled_files \
-    --search-dir ./ \
+    --search-dir /scratch/groups/jdf1/ribfrac/irb58665-rit \
     --labels ./data/stanford/labels.csv \
     --out-dir ./data/stanford/dicoms/
