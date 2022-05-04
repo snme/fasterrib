@@ -4,3 +4,4 @@ scikit-image==0.19.2
 pydicom==2.3.0
 nibabel==3.2.2
 nilearn==0.9.1
+dicom2nifti==2.3.3
