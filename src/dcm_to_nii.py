@@ -39,6 +39,7 @@ def main(args):
 
     # Scan the search_dir looking for dcm series directories
     for (dirname, path) in listdirs(search_dir):
+        print(dirname)
         if dirname in series_to_nii_filename:
             print('converting series:', dirname)
             out_filename = os.path.join(out_dir, series_to_nii_filename[dirname])
