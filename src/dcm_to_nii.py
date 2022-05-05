@@ -37,11 +37,12 @@ def main(args):
             anon_accession = row["anon_mrn"]
             series_to_nii_filename[series] = f"{anon_mrn}-{anon_accession}.nii.gz"
 
+    N = len(series_to_nii_filename)
+    print('total series to convert:', N)
     # Scan the search_dir looking for dcm series directories
-    for (dirname, path) in listdirs(search_dir):
-        print(dirname)
+    for i, (dirname, path) in enumerate(listdirs(search_dir)):
         if dirname in series_to_nii_filename:
-            print('converting series:', dirname)
+            print(f'converting series ({i}/{N}):', dirname)
             out_filename = os.path.join(out_dir, series_to_nii_filename[dirname])
             dicom2nifti.dicom_series_to_nifti(path, out_filename , reorient_nifti=True)
 
