@@ -2,6 +2,11 @@ import argparse
 import csv
 import os
 import dicom2nifti
+import dicom2nifti.settings as settings
+
+settings.enable_resampling()
+settings.set_resample_spline_interpolation_order(1)
+settings.set_resample_padding(-1000)
 
 parser = argparse.ArgumentParser(
     description="Searches for all dcm series mentioned in the input labels file and converts them to .nii.gz files."
