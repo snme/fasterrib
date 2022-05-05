@@ -46,7 +46,8 @@ def main(args):
             i += 1
             print(f'converting series ({i}/{N}):', dirname)
             out_filename = os.path.join(out_dir, series_to_nii_filename[dirname])
-            dicom2nifti.dicom_series_to_nifti(path, out_filename , reorient_nifti=True)
+            if not os.path.exists(out_filename):
+                dicom2nifti.dicom_series_to_nifti(path, out_filename , reorient_nifti=True)
 
 if __name__ == "__main__":
     args = parser.parse_args()
