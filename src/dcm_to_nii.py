@@ -4,6 +4,8 @@ import os
 import dicom2nifti
 import dicom2nifti.settings as settings
 
+settings.disable_validate_slice_increment()
+settings.disable_validate_slicecount()
 settings.disable_validate_orthogonal()
 settings.enable_resampling()
 settings.set_resample_spline_interpolation_order(1)
