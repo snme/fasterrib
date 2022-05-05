@@ -11,5 +11,5 @@ for f in ./compressed_dicoms/*.tgz;
 do 
     ((i=i+1));
     echo `$1: $f`;
-    tar -xzvf "$f" -C ./dicoms/; 
+    tar -xzf "$f" -C ./dicoms/; 
 done
