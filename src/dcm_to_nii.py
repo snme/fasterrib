@@ -40,8 +40,10 @@ def main(args):
     N = len(series_to_nii_filename)
     print('total series to convert:', N)
     # Scan the search_dir looking for dcm series directories
-    for i, (dirname, path) in enumerate(listdirs(search_dir)):
+    i = 0
+    for (dirname, path) in listdirs(search_dir):
         if dirname in series_to_nii_filename:
+            i += 1
             print(f'converting series ({i}/{N}):', dirname)
             out_filename = os.path.join(out_dir, series_to_nii_filename[dirname])
             dicom2nifti.dicom_series_to_nifti(path, out_filename , reorient_nifti=True)
