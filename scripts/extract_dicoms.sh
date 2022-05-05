@@ -10,6 +10,6 @@ i=0
 for f in ./compressed_dicoms/*.tgz; 
 do 
     ((i=i+1));
-    echo `$1: $f`;
+    echo "$1: $f";
     tar -xzf "$f" -C ./dicoms/; 
 done
