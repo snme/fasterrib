@@ -2,13 +2,13 @@
 #SBATCH --job-name=ribfrac-dcm-to-nii
 #SBATCH --output=train-log.txt
 #SBATCH --error=train-err.txt
-#SBATCH --time=24:00:00
+#SBATCH --time=12:00:00
 #SBATCH  -p owners
 #SBATCH --nodes=1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=davidwb
 #SBATCH --partition=normal
-#SBATCH --mem=128GB
+#SBATCH --mem=64GB
 
 set -eo pipefail
 
