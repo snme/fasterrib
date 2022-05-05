@@ -2,7 +2,7 @@
 #SBATCH --job-name=ribfrac-dcm-to-nii
 #SBATCH --output=train-log.txt
 #SBATCH --error=train-err.txt
-#SBATCH --time=48:00:00
+#SBATCH --time=24:00:00
 #SBATCH  -p owners
 #SBATCH --nodes=1
 #SBATCH --mail-type=ALL
