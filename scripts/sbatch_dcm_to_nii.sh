@@ -7,8 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=davidwb
-#SBATCH --mem=256GB
-#SBATCH --partition=bigmem
+#SBATCH --mem=64GB
 
 set -eo pipefail
 
