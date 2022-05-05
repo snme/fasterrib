@@ -12,13 +12,15 @@
 
 set -eo pipefail
 
-DIR="$(cd $(dirname ${0}); pwd)"
+# DIR="$(cd $(dirname ${0}); pwd)"
 
-cd $DIR/..
+# cd $DIR/..
 
 # start conda env
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate ribfrac
+
+echo "working dir:" `pwd`
 
 # To be run on Sherlock
 python -m src.dcm_to_nii \
