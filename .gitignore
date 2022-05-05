@@ -1,3 +1,5 @@
 .ipynb_checkpoints/
 data/stanford/*
 !data/stanford/labels.csv
+data/ribfrac-challenge
+data/ribfrac-challenge
