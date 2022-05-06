@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=ribfrac-dcm-to-nii
-#SBATCH --output=train-log.txt
-#SBATCH --error=train-err.txt
+#SBATCH --output=nii-log.txt
+#SBATCH --error=nii-err.txt
 #SBATCH --time=12:00:00
 #SBATCH  -p owners
 #SBATCH --nodes=1
