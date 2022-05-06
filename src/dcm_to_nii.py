@@ -42,7 +42,7 @@ def main(args):
         for row in reader:
             series = row["series_instance"]
             anon_mrn = row["anon_mrn"]
-            anon_accession = row["anon_mrn"]
+            anon_accession = row["anon_accession"]
             series_to_nii_filename[series] = f"{anon_mrn}-{anon_accession}.nii.gz"
 
     N = len(series_to_nii_filename)
