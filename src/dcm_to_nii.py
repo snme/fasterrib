@@ -1,6 +1,7 @@
 import argparse
 import csv
 import os
+
 import dicom2nifti
 import dicom2nifti.settings as settings
 
@@ -28,9 +29,8 @@ def listdirs(rootdir):
         if it.is_dir():
             yield (it.name, it.path)
             yield from listdirs(it)
- 
-rootdir = 'path/to/dir'
-listdirs(rootdir)
+
+
 def main(args):
     search_dir = args.search_dir
     out_dir = args.out_dir
@@ -46,16 +46,19 @@ def main(args):
             series_to_nii_filename[series] = f"{anon_mrn}-{anon_accession}.nii.gz"
 
     N = len(series_to_nii_filename)
-    print('total series to convert:', N)
+    print("total series to convert:", N)
     # Scan the search_dir looking for dcm series directories
     i = 0
     for (dirname, path) in listdirs(search_dir):
         if dirname in series_to_nii_filename:
             i += 1
-            print(f'converting series ({i}/{N}):', dirname)
+            print(f"converting series ({i}/{N}):", dirname)
             out_filename = os.path.join(out_dir, series_to_nii_filename[dirname])
             if not os.path.exists(out_filename):
-                dicom2nifti.dicom_series_to_nifti(path, out_filename , reorient_nifti=True)
+                dicom2nifti.dicom_series_to_nifti(
+                    path, out_filename, reorient_nifti=True
+                )
+
 
 if __name__ == "__main__":
     args = parser.parse_args()
