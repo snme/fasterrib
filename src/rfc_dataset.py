@@ -33,10 +33,10 @@ class RFCDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-
+        print("idx", idx)
         img = nib.load(self.img_paths[idx]).get_fdata()
         label = nib.load(self.label_paths[idx]).get_fdata()
-        
+
         example = {"image": img, "label": label}
 
         return example
