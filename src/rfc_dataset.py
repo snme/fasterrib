@@ -65,7 +65,7 @@ class RFCDataset(Dataset):
         label_slice = torch.as_tensor(label_slice, dtype=torch.long)
         label_slice = torch.nn.functional.one_hot(label_slice, num_classes=6).transpose(
             2, 0
-        )
+        )  # (n_classes, 512, 512)
 
         example = {"image": img_slice, "label": label_slice}
 
