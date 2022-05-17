@@ -7,11 +7,11 @@ from torch import nn
 class UNet(nn.Module):
     def __init__(
         self,
-        enc_chs=(3, 64, 128, 256, 512, 1024),
+        enc_chs=(1, 64, 128, 256, 512, 1024),
         dec_chs=(1024, 512, 256, 128, 64),
-        num_class=1,
+        num_class=6,
         retain_dim=False,
-        out_size=(572, 572),
+        out_size=(512, 512),
     ):
         super().__init__()
         self.encoder = Encoder(enc_chs)

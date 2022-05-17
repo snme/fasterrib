@@ -19,8 +19,12 @@ def train(data_loader, model, optimizer, loss_fn):
     for b_idx, data in enumerate(tk0):
         for key, value in data.items():
             data[key] = value.to(device)
-        out = model(data["image"])
-        loss = loss_fn(out, data["label"])
+
+        img = data["image"]
+        label = data["label"]
+
+        out = model(img)
+        loss = loss_fn(out, label)
         with torch.set_grad_enabled(True):
             loss.backward()
             optimizer.step()
@@ -34,7 +38,7 @@ def main():
         img_dir="./data/ribfrac-challenge/training/images/all",
         label_dir="./data/ribfrac-challenge/training/labels/all",
     )
-    data = Subset(data, np.arange(10))
+    # data = Subset(data, np.arange(10))
     data_loader = DataLoader(data)
     print(len(data))
     model = UNet().to(device)
