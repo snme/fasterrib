@@ -5,7 +5,7 @@ from torch import nn
 
 
 class Decoder(nn.Module):
-    def __init__(self, chs=(1024, 512, 256, 128, 64)):
+    def __init__(self, chs=(512, 256, 128, 64, 32)):
         super().__init__()
         self.chs = chs
         self.upconvs = nn.ModuleList(

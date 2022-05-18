@@ -1,3 +1,4 @@
+import csv
 from functools import lru_cache
 from pathlib import Path
 
@@ -10,7 +11,7 @@ from torch.utils.data import Dataset
 class RFCDataset(Dataset):
     """RibFrac Challenge dataset."""
 
-    def __init__(self, img_dir: str, label_dir):
+    def __init__(self, img_dir: str, label_dir: str, train_info_csv: str):
         """
         Args:
             img_dir (string): Path to the directory of *.nii.gz image files.
@@ -18,6 +19,16 @@ class RFCDataset(Dataset):
         """
         self.img_dir = img_dir
         self.label_dir = label_dir
+
+        label_id_to_code = {}
+        with open(train_info_csv, newline="") as f:
+            reader = csv.DictReader(f, delimiter=",")
+            for row in reader:
+                label_id = int(row["label_id"])
+                code = int(row["label_code"])
+                label_id_to_code[label_id] = code
+
+        self.label_id_to_code = np.vectorize(label_id_to_code.__getitem__)
 
         img_paths = [path for path in Path(img_dir).glob("*.nii.gz")]
         img_paths.sort()
@@ -42,9 +53,6 @@ class RFCDataset(Dataset):
             total_slices += num_slices
 
         self.slice_to_img = slice_to_img
-
-        print("total slices:", total_slices)
-
         self.total_slices = total_slices
 
     def __len__(self):
@@ -63,7 +71,7 @@ class RFCDataset(Dataset):
         label_slice = label[:, :, img_slice_j]
 
         label_slice = torch.as_tensor(label_slice, dtype=torch.long)
-        label_slice = torch.nn.functional.one_hot(label_slice, num_classes=6).transpose(
+        label_slice = torch.nn.functional.one_hot(label_slice, num_classes=2).transpose(
             2, 0
         )  # (n_classes, 512, 512)
 
@@ -79,5 +87,7 @@ class RFCDataset(Dataset):
     @lru_cache(maxsize=50)
     def load_label_data(self, i):
         label = nib.load(self.label_paths[i]).get_fdata().astype(np.int8)
-        label += 1  # force labels to be 0,1,2,3,4,5 https://zenodo.org/record/3893508#.YoL-wnXMJH5
+        # label = self.label_id_to_code(label)
+        # label += 1  # force labels to be 0,1,2,3,4,5 https://zenodo.org/record/3893508#.YoL-wnXMJH5
+        label[label != 0] = 1
         return label

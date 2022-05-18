@@ -9,14 +9,14 @@ class UNet(nn.Module):
         self,
         enc_chs=(1, 64, 128, 256, 512, 1024),
         dec_chs=(1024, 512, 256, 128, 64),
-        num_class=6,
+        num_classes=2,
         retain_dim=False,
         out_size=(512, 512),
     ):
         super().__init__()
         self.encoder = Encoder(enc_chs)
         self.decoder = Decoder(dec_chs)
-        self.head = nn.Conv2d(dec_chs[-1], num_class, 1)
+        self.head = nn.Conv2d(dec_chs[-1], num_classes, 1)
         self.retain_dim = retain_dim
         self.out_size = out_size
 
