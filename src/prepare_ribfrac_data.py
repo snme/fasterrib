@@ -1,5 +1,6 @@
 import argparse
 import csv
+import gzip
 import os
 from pathlib import Path
 
@@ -12,6 +13,9 @@ from tqdm import tqdm
 parser = argparse.ArgumentParser(
     description="Prepares RibFrac Challenge images and labels for training and evaluation"
 )
+parser.add_argument(
+    "--split", choices=["train", "val", "all"], help="Which split of data to prepare"
+)
 
 dirname = os.path.dirname(__file__)
 train_images_dir = os.path.join(
@@ -23,8 +27,12 @@ train_labels_dir = os.path.join(
 train_info_path = os.path.join(
     dirname, "../data/ribfrac-challenge/training/ribfrac-train-info-all.csv"
 )
-val_images_dir = os.path.join(dirname, "data/ribfrac-challenge/validation/images/all")
-val_labels_dir = os.path.join(dirname, "data/ribfrac-challenge/validation/labels/all")
+val_images_dir = os.path.join(
+    dirname, "data/ribfrac-challenge/validation/ribfrac-val-images"
+)
+val_labels_dir = os.path.join(
+    dirname, "data/ribfrac-challenge/validation/ribfrac-val-labels"
+)
 val_info_path = os.path.join(
     dirname, "../data/ribfrac-challenge/validation/ribfrac-val-info.csv"
 )
@@ -80,16 +88,17 @@ def prepare_data(img_dir, label_dir, info_path, out_dir):
         assert label.max() <= 5
 
         label = torch.nn.functional.one_hot(label, num_classes=6)
+        label = label.type(torch.int8)
 
         assert list(label.size()) == [n_slices, 512, 512, 6]
 
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
-        out_path = os.path.join(out_dir, f"img_label_pair_{i}.pt")
-        torch.save((img, label), out_path)
+        out_path = os.path.join(out_dir, f"img_label_pair_{i}.pt.gz")
+        torch.save((img.clone(), label.clone()), gzip.GzipFile(out_path, "wb"))
 
 
-def main():
+def prepare_train():
     print("Preparing training data")
     prepare_data(
         img_dir=train_images_dir,
@@ -99,6 +108,31 @@ def main():
     )
 
 
+def prepare_val():
+    print("Preparing validation data")
+    prepare_data(
+        img_dir=train_images_dir,
+        label_dir=train_labels_dir,
+        info_path=train_info_path,
+        out_dir=train_out_dir,
+    )
+
+
+def prepare_all():
+    print("Preparing all data")
+    prepare_train()
+    prepare_val()
+
+
+def main(args):
+    if args.split == "train":
+        prepare_train()
+    elif args.split == "val":
+        prepare_val()
+    else:
+        prepare_all()
+
+
 if __name__ == "__main__":
-    parser.parse_args()
-    main()
+    args = parser.parse_args()
+    main(args)

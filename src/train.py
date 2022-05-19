@@ -28,14 +28,10 @@ def train(data_loader, val_loader=None):
 
 def main():
     data = RFCDataset(
-        img_dir="./data/ribfrac-challenge/training/images/all",
-        label_dir="./data/ribfrac-challenge/training/labels/all",
-        train_info_csv="./data/ribfrac-challenge/training/ribfrac-train-info-all.csv",
+        data_dir="./data/ribfrac-challenge/training/prepared",
     )
     val_data = RFCDataset(
-        img_dir="./data/ribfrac-challenge/validation/ribfrac-val-images",
-        label_dir="./data/ribfrac-challenge/validation/ribfrac-val-labels",
-        train_info_csv="./data/ribfrac-challenge/training/ribfrac-train-info-all.csv",
+        data_dir="./data/ribfrac-challenge/validation/prepared",
     )
     val_data = Subset(val_data, np.arange(200))
     train_loader = DataLoader(data, batch_size=8, num_workers=8)

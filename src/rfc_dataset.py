@@ -11,48 +11,30 @@ from torch.utils.data import Dataset
 class RFCDataset(Dataset):
     """RibFrac Challenge dataset."""
 
-    def __init__(self, img_dir: str, label_dir: str, train_info_csv: str):
+    def __init__(self, data_dir: str):
         """
         Args:
-            img_dir (string): Path to the directory of *.nii.gz image files.
-            label_dir (string): Path to the directory of *.nii.gz label files.
+            data_dir (string): Path to the directory of preprepared data files.
         """
-        self.img_dir = img_dir
-        self.label_dir = label_dir
+        self.data_dir = data_dir
 
-        label_id_to_code = {}
-        with open(train_info_csv, newline="") as f:
-            reader = csv.DictReader(f, delimiter=",")
-            for row in reader:
-                label_id = int(row["label_id"])
-                code = int(row["label_code"])
-                label_id_to_code[label_id] = code
+        paths = [path for path in Path(data_dir).glob("*.pt")]
 
-        self.label_id_to_code = np.vectorize(label_id_to_code.__getitem__)
+        self.paths = paths
 
-        img_paths = [path for path in Path(img_dir).glob("*.nii.gz")]
-        img_paths.sort()
-
-        label_paths = [path for path in Path(label_dir).glob("*.nii.gz")]
-        label_paths.sort()
-
-        assert len(img_paths) == len(label_paths)
-
-        self.img_paths = img_paths
-        self.label_paths = label_paths
-
-        # Maps slice index to the index of the image it came from.
-        slice_to_img = {}
+        # Maps slice index to the index of the file it came from.
+        slice_to_path = {}
 
         total_slices = 0
-        for i, path in enumerate(img_paths):
-            num_slices = nib.load(path).shape[-1]
+        for i, path in enumerate(paths):
+            (img, label) = torch.load(path)
+            num_slices = img.shape[0]
             for j in range(num_slices):
-                slice_to_img[total_slices + j] = (i, j)
+                slice_to_path[total_slices + j] = (i, j)
 
             total_slices += num_slices
 
-        self.slice_to_img = slice_to_img
+        self.slice_to_path = slice_to_path
         self.total_slices = total_slices
 
     def __len__(self):
@@ -62,32 +44,18 @@ class RFCDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-        img_i, img_slice_j = self.slice_to_img[idx]
+        img_i, img_slice_j = self.slice_to_path[idx]
 
-        img = self.load_image_data(img_i)
-        label = self.load_label_data(img_i)
+        img, label = self.load_data_file(img_i)
 
-        img_slice = img[:, :, img_slice_j][np.newaxis, :]
-        label_slice = label[:, :, img_slice_j]
-
-        label_slice = torch.as_tensor(label_slice, dtype=torch.long)
-        label_slice = torch.nn.functional.one_hot(label_slice, num_classes=2).transpose(
-            2, 0
-        )  # (n_classes, 512, 512)
+        img_slice = img[img_slice_j]
+        label_slice = label[img_slice_j]
 
         example = {"image": img_slice, "label": label_slice}
 
         return example
 
     @lru_cache(maxsize=50)
-    def load_image_data(self, i):
-        img = nib.load(self.img_paths[i]).get_fdata().astype(np.float32)
-        return img
-
-    @lru_cache(maxsize=50)
-    def load_label_data(self, i):
-        label = nib.load(self.label_paths[i]).get_fdata().astype(np.int8)
-        # label = self.label_id_to_code(label)
-        # label += 1  # force labels to be 0,1,2,3,4,5 https://zenodo.org/record/3893508#.YoL-wnXMJH5
-        label[label != 0] = 1
-        return label
+    def load_data_file(self, i):
+        (img, label) = torch.load(self.paths[i])
+        return (img, label)
