@@ -9,7 +9,7 @@ class UNet(nn.Module):
         self,
         enc_chs=(1, 64, 128, 256, 512, 1024),
         dec_chs=(1024, 512, 256, 128, 64),
-        num_classes=2,
+        num_classes=6,
         retain_dim=False,
         out_size=(512, 512),
     ):

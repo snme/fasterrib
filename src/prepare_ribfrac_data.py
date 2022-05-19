@@ -28,10 +28,10 @@ train_info_path = os.path.join(
     dirname, "../data/ribfrac-challenge/training/ribfrac-train-info-all.csv"
 )
 val_images_dir = os.path.join(
-    dirname, "data/ribfrac-challenge/validation/ribfrac-val-images"
+    dirname, "../data/ribfrac-challenge/validation/ribfrac-val-images"
 )
 val_labels_dir = os.path.join(
-    dirname, "data/ribfrac-challenge/validation/ribfrac-val-labels"
+    dirname, "../data/ribfrac-challenge/validation/ribfrac-val-labels"
 )
 val_info_path = os.path.join(
     dirname, "../data/ribfrac-challenge/validation/ribfrac-val-info.csv"
@@ -95,7 +95,9 @@ def prepare_data(img_dir, label_dir, info_path, out_dir):
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
         out_path = os.path.join(out_dir, f"img_label_pair_{i}.pt.gz")
+        num_slices_path = os.path.join(out_dir, f"num_slices_{i}.pt")
         torch.save((img.clone(), label.clone()), gzip.GzipFile(out_path, "wb"))
+        torch.save(n_slices, num_slices_path)
 
 
 def prepare_train():
@@ -111,10 +113,10 @@ def prepare_train():
 def prepare_val():
     print("Preparing validation data")
     prepare_data(
-        img_dir=train_images_dir,
-        label_dir=train_labels_dir,
-        info_path=train_info_path,
-        out_dir=train_out_dir,
+        img_dir=val_images_dir,
+        label_dir=val_labels_dir,
+        info_path=val_info_path,
+        out_dir=val_out_dir,
     )
 
 

@@ -1,4 +1,5 @@
 import csv
+import gzip
 from functools import lru_cache
 from pathlib import Path
 
@@ -18,17 +19,23 @@ class RFCDataset(Dataset):
         """
         self.data_dir = data_dir
 
-        paths = [path for path in Path(data_dir).glob("*.pt")]
+        paths = [path for path in Path(data_dir).glob("*.pt.gz")]
+        num_slices_paths = [path for path in Path(data_dir).glob("num_slices_*.pt")]
+
+        paths.sort()
+        num_slices_paths.sort()
+
+        assert len(paths) == len(num_slices_paths)
 
         self.paths = paths
+        self.num_slices_paths = num_slices_paths
 
         # Maps slice index to the index of the file it came from.
         slice_to_path = {}
 
         total_slices = 0
-        for i, path in enumerate(paths):
-            (img, label) = torch.load(path)
-            num_slices = img.shape[0]
+        for i, path in enumerate(num_slices_paths):
+            num_slices = torch.load(path)
             for j in range(num_slices):
                 slice_to_path[total_slices + j] = (i, j)
 
@@ -36,6 +43,9 @@ class RFCDataset(Dataset):
 
         self.slice_to_path = slice_to_path
         self.total_slices = total_slices
+
+        for i in range(total_slices):
+            assert i in self.slice_to_path
 
     def __len__(self):
         return self.total_slices
@@ -48,8 +58,8 @@ class RFCDataset(Dataset):
 
         img, label = self.load_data_file(img_i)
 
-        img_slice = img[img_slice_j]
-        label_slice = label[img_slice_j]
+        img_slice = img[img_slice_j][np.newaxis, :]
+        label_slice = label[img_slice_j][np.newaxis, :]
 
         example = {"image": img_slice, "label": label_slice}
 
@@ -57,5 +67,5 @@ class RFCDataset(Dataset):
 
     @lru_cache(maxsize=50)
     def load_data_file(self, i):
-        (img, label) = torch.load(self.paths[i])
+        (img, label) = torch.load(gzip.GzipFile(self.paths[i], "rb"))
         return (img, label)
