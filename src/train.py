@@ -30,12 +30,12 @@ def main():
     data = RFCDataset(
         data_dir="./data/ribfrac-challenge/training/prepared",
     )
-    # val_data = RFCDataset(
-    #     data_dir="./data/ribfrac-challenge/validation/prepared",
-    # )
-    # val_data = Subset(val_data, np.arange(200))
-    train_loader = DataLoader(data, batch_size=8, num_workers=8)
-    val_loader = DataLoader(data, batch_size=8, num_workers=8)
+    val_data = RFCDataset(
+        data_dir="./data/ribfrac-challenge/validation/prepared",
+    )
+    val_data = Subset(val_data, np.arange(200))
+    train_loader = DataLoader(data, batch_size=4, num_workers=8, shuffle=True)
+    val_loader = DataLoader(val_data, batch_size=4, num_workers=8)
     print(len(data))
     train(train_loader, val_loader)
 

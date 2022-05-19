@@ -94,10 +94,12 @@ def prepare_data(img_dir, label_dir, info_path, out_dir):
 
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
-        out_path = os.path.join(out_dir, f"img_label_pair_{i}.pt.gz")
-        num_slices_path = os.path.join(out_dir, f"num_slices_{i}.pt")
-        torch.save((img.clone(), label.clone()), gzip.GzipFile(out_path, "wb"))
-        torch.save(n_slices, num_slices_path)
+
+        for s in range(n_slices):
+            out_path = os.path.join(out_dir, f"slice_pair_{i}_{s}.pt.gz")
+            torch.save(
+                (img[s].clone(), label[s].clone()), gzip.GzipFile(out_path, "wb")
+            )
 
 
 def prepare_train():
