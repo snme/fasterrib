@@ -41,9 +41,11 @@ class MixedLoss(nn.Module):
         super().__init__()
         self.alpha = alpha
         self.focal = FocalLoss(gamma)
+        self.cross_entropy = nn.CrossEntropyLoss(reduction="none")
 
     def forward(self, input, target):
-        dice = dice_loss(input, target)
-        focal = self.focal(input, target)
-        loss = self.alpha * focal - torch.log(dice)
-        return loss.mean(), dice.mean(), focal.mean()
+        target = torch.argmax(target, dim=1)  # one-hot -> indices
+        dice = torch.as_tensor(0.0)  # dice_loss(input, target)
+        ce = self.cross_entropy(input, target)
+        loss = ce
+        return loss.mean(), dice.mean(), ce.mean()

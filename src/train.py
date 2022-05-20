@@ -38,7 +38,7 @@ def train(data_loader, val_loader=None):
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=-1,
-        val_check_interval=5000,
+        val_check_interval=200,
         callbacks=[checkpoint_callback],
         max_epochs=2,
         logger=wandb_logger,
@@ -53,7 +53,7 @@ def main():
     val_data = RFCDataset(
         data_dir="./data/ribfrac-challenge/validation/prepared",
     )
-    val_indices = torch.randperm(len(val_data))[:4000]
+    val_indices = torch.randperm(len(val_data))[:2000]
     val_subset = Subset(val_data, val_indices)
     train_loader = DataLoader(data, batch_size=batch_size, num_workers=24, shuffle=True)
     val_loader = DataLoader(val_subset, batch_size=batch_size, num_workers=24)
