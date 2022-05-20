@@ -43,7 +43,7 @@ class MixedLoss(nn.Module):
         self.focal = FocalLoss(gamma)
 
     def forward(self, input, target):
-        loss = self.alpha * self.focal(input, target) - torch.log(
-            dice_loss(input, target)
-        )
-        return loss.mean()
+        dice = dice_loss(input, target)
+        focal = self.focal(input, target)
+        loss = self.alpha * focal - torch.log(dice)
+        return loss.mean(), dice.mean(), focal.mean()

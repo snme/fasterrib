@@ -15,7 +15,10 @@ class LitUNet(pl.LightningModule):
         img = batch["image"]
         label = batch["label"]
         out = self.unet(img)
-        loss = loss_fn(out, label)
+        loss, dice, focal = loss_fn(out, label)
+        self.log("train_loss", loss, prog_bar=True)
+        self.log("train_dice", dice, prog_bar=True)
+        self.log("train_focal", focal, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -24,12 +27,16 @@ class LitUNet(pl.LightningModule):
         img = batch["image"]
         label = batch["label"]
         out = self.unet(img)
-        loss = loss_fn(out, label)
-        return loss
+        loss, dice, focal = loss_fn(out, label)
+        return loss, dice, focal
 
-    def validation_epoch_end(self, validation_step_outputs):
-        loss = torch.stack(validation_step_outputs).mean()
+    def validation_epoch_end(self, outputs):
+        loss = torch.stack([x[0] for x in outputs]).mean()
+        dice = torch.stack([x[1] for x in outputs]).mean()
+        focal = torch.stack([x[2] for x in outputs]).mean()
         self.log("val_loss", loss, prog_bar=True)
+        self.log("val_dice", dice, prog_bar=True)
+        self.log("val_focal", focal, prog_bar=True)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)

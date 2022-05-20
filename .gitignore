@@ -6,3 +6,5 @@ data/ribfrac-challenge
 data/ribseg/*
 __pycache__
 lightning_logs/
+wandb/
+checkpoints/
