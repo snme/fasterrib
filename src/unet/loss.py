@@ -6,10 +6,12 @@ from torch import nn
 def dice_loss(input, target):
     input = torch.sigmoid(input)
     smooth = 1.0
-    iflat = input.view(-1)
-    tflat = target.view(-1)
-    intersection = (iflat * tflat).sum()
-    return (2.0 * intersection + smooth) / (iflat.sum() + tflat.sum() + smooth)
+    iflat = input.flatten(start_dim=1)
+    tflat = target.flatten(start_dim=1)
+    intersection = (iflat * tflat).sum(dim=1)
+    return (2.0 * intersection + smooth) / (
+        iflat.sum(dim=1) + tflat.sum(dim=1) + smooth
+    )
 
 
 class FocalLoss(nn.Module):
@@ -36,6 +38,15 @@ class FocalLoss(nn.Module):
         return loss.mean()
 
 
+def multiclass_dice_loss(input, target):
+    dices = []
+    for index in range(6):
+        dices.append(dice_loss(input[:, index, :, :], target[:, index, :, :]))
+    dice = torch.stack(dices, dim=1)
+    dice = dice.sum(dim=1) / 6  # taking average
+    return dice
+
+
 class MixedLoss(nn.Module):
     def __init__(self, alpha, gamma):
         super().__init__()
@@ -44,8 +55,12 @@ class MixedLoss(nn.Module):
         self.cross_entropy = nn.CrossEntropyLoss(reduction="none")
 
     def forward(self, input, target):
+        dice = multiclass_dice_loss(input, target)
+
         target = torch.argmax(target, dim=1)  # one-hot -> indices
-        dice = torch.as_tensor(0.0)  # dice_loss(input, target)
         ce = self.cross_entropy(input, target)
-        loss = ce.sum(dim=(1, 2))
+        ce = ce.sum(dim=(1, 2))
+
+        loss = ce - torch.log(dice)
+
         return loss.mean(), dice.mean(), ce.mean()
