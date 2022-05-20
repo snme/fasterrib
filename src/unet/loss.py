@@ -61,6 +61,6 @@ class MixedLoss(nn.Module):
         ce = self.cross_entropy(input, target)
         ce = ce.sum(dim=(1, 2))
 
-        loss = ce - torch.log(dice)
+        loss = ce - 100 * torch.log(dice)
 
         return loss.mean(), dice.mean(), ce.mean()
