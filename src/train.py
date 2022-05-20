@@ -20,6 +20,8 @@ parser.add_argument(
     "--wandb-api-key", help="W&B API KEY for experiment visualization", required=False
 )
 
+batch_size = 16
+
 
 def train(data_loader, val_loader=None):
     model = LitUNet(UNet())
@@ -53,8 +55,8 @@ def main():
     )
     val_indices = torch.randperm(len(val_data))[:4000]
     val_subset = Subset(val_data, val_indices)
-    train_loader = DataLoader(data, batch_size=4, num_workers=24, shuffle=True)
-    val_loader = DataLoader(val_subset, batch_size=4, num_workers=24)
+    train_loader = DataLoader(data, batch_size=batch_size, num_workers=24, shuffle=True)
+    val_loader = DataLoader(val_subset, batch_size=batch_size, num_workers=24)
     print("Num training examples:", len(data))
     print("Num validation examples:", len(val_data))
     train(train_loader, val_loader)
