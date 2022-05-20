@@ -1,3 +1,5 @@
+import typing as t
+
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -38,12 +40,20 @@ class FocalLoss(nn.Module):
         return loss.mean()
 
 
-def multiclass_dice_loss(input, target):
+def multiclass_dice_loss(
+    input, target, num_classes: int, ignore_classes: t.Optional[t.List[int]] = None
+):
+    if ignore_classes is None:
+        ignore_classes = []
+
     dices = []
-    for index in range(6):
+    for index in range(num_classes):
+        if index in ignore_classes:
+            continue
         dices.append(dice_loss(input[:, index, :, :], target[:, index, :, :]))
+
     dice = torch.stack(dices, dim=1)
-    dice = dice.sum(dim=1) / 6  # taking average
+    dice = dice.sum(dim=1) / len(dices)  # taking average
     return dice
 
 
@@ -55,12 +65,13 @@ class MixedLoss(nn.Module):
         self.cross_entropy = nn.CrossEntropyLoss(reduction="none")
 
     def forward(self, input, target):
-        dice = multiclass_dice_loss(input, target)
+        # ignore class=1 since this corresponds to the background class.
+        dice = multiclass_dice_loss(input, target, num_classes=6, ignore_classes=[1])
 
         target = torch.argmax(target, dim=1)  # one-hot -> indices
         ce = self.cross_entropy(input, target)
-        ce = ce.sum(dim=(1, 2))
+        ce = ce.mean(dim=(1, 2))
 
-        loss = ce - 100 * torch.log(dice)
+        loss = 100 * (ce - torch.log(dice))
 
         return loss.mean(), dice.mean(), ce.mean()
