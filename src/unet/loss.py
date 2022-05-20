@@ -47,5 +47,5 @@ class MixedLoss(nn.Module):
         target = torch.argmax(target, dim=1)  # one-hot -> indices
         dice = torch.as_tensor(0.0)  # dice_loss(input, target)
         ce = self.cross_entropy(input, target)
-        loss = ce
+        loss = ce.sum(dim=(1, 2))
         return loss.mean(), dice.mean(), ce.mean()
