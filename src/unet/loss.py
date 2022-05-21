@@ -67,8 +67,9 @@ class MixedLoss(nn.Module):
         # Weighted cross-entropy loss
         target_indices = torch.argmax(target, dim=1)  # one-hot -> indices
         weights = (class_counts + 1) / (class_counts + 1).sum()
+        weights = 1 / weights
         ce = F.cross_entropy(input, target_indices, weight=weights, reduction="none")
-        ce = ce.mean(dim=(1, 2))
+        ce = ce.sum(dim=(1, 2)) / weights[target_indices].sum(dim=(1, 2))
 
         sample_class_counts = self.get_sample_class_counts(target_indices, 6)
 
