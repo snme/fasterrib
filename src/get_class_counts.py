@@ -32,8 +32,14 @@ def main():
         label = x["label"]
         label.to(device)
         label = torch.argmax(label, dim=1)  # one-hot -> indices
+
+        assert label.min() >= 0
+        assert label.max() <= 5
+
         for i in range(n_classes):
             class_counts[i] += label[label == i].sum()
+
+    print("class counts:", class_counts)
     torch.save(class_counts, out_path)
 
 
