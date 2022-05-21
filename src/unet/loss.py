@@ -15,35 +15,11 @@ def dice_loss(input, target):
     )
 
 
-class FocalLoss(nn.Module):
-    def __init__(self, gamma):
-        super().__init__()
-        self.gamma = gamma
-
-    def forward(self, input, target):
-        if not (target.size() == input.size()):
-            raise ValueError(
-                "Target size ({}) must be the same as input size ({})".format(
-                    target.size(), input.size()
-                )
-            )
-        max_val = (-input).clamp(min=0)
-        loss = (
-            input
-            - input * target
-            + max_val
-            + ((-max_val).exp() + (-input - max_val).exp()).log()
-        )
-        invprobs = F.logsigmoid(-input * (target * 2.0 - 1.0))
-        loss = (invprobs * self.gamma).exp() * loss
-        return loss.mean()
-
-
 def multiclass_dice_loss(
     input,
     target,
     num_classes: int,
-    class_counts,
+    sample_class_counts,
     ignore_classes: t.Optional[t.List[int]] = None,
 ):
     if ignore_classes is None:
@@ -52,17 +28,20 @@ def multiclass_dice_loss(
     input = F.softmax(input, dim=1)
 
     dices = []
+    mask = []
     for index in range(num_classes):
         if index in ignore_classes:
             continue
 
-        gtz = class_counts[index] > 0
+        mask.append(sample_class_counts[:, index] > 0)
+        dices.append(dice_loss(input[:, index], target[:, index]))
 
-        dices.append(gtz * dice_loss(input[:, index], target[:, index]))
-
+    # mask out classes with zero counts
+    mask = torch.stack(mask, dim=1)
     dice = torch.stack(dices, dim=1)
-    dice = dice.sum(dim=1) / (dice > 0).sum(dim=1)
-    dice = torch.nan_to_num(dice, nan=0.0)
+    dice = (dice * mask).sum(dim=1) / (
+        mask.sum(dim=1) + 1e-8
+    )  # Average dice over classes
     return dice
 
 
@@ -70,42 +49,49 @@ class MixedLoss(nn.Module):
     def __init__(self, alpha, gamma):
         super().__init__()
         self.alpha = alpha
-        self.focal = FocalLoss(gamma)
-        self.cross_entropy = nn.CrossEntropyLoss(reduction="none")
+
+    def get_sample_class_counts(self, target, n_classes):
+        counts = torch.zeros(
+            (
+                target.size(0),
+                n_classes,
+            ),
+            dtype=torch.long,
+            requires_grad=False,
+        ).to(target.get_device())
+        for i in range(n_classes):
+            counts[:, i] += (target == i).sum(dim=(1, 2))
+        return counts
 
     def forward(self, input, target, class_counts: torch.Tensor):
         # Weighted cross-entropy loss
         target_indices = torch.argmax(target, dim=1)  # one-hot -> indices
-
-        # DICE loss
-        # ignore class=1 since this corresponds to the background class.
-        non_background_counts = class_counts[[0, 2, 3, 4, 5]].sum()
-        if non_background_counts > 0:
-            dice = multiclass_dice_loss(
-                input,
-                target,
-                num_classes=6,
-                class_counts=class_counts,
-                ignore_classes=[1],
-            )
-        else:
-            dice = None
-
-        weights = 1 / (class_counts + 1)
-        weights = weights / weights.sum()
-
+        weights = (class_counts + 1) / (class_counts + 1).sum()
         ce = F.cross_entropy(input, target_indices, weight=weights, reduction="none")
         ce = ce.mean(dim=(1, 2))
 
-        if dice is None:
-            loss = 100 * ce
-            return loss.mean(), None, ce.mean()
+        sample_class_counts = self.get_sample_class_counts(target_indices, 6)
 
-        loss = torch.tensor(0.0).to(input.get_device())
+        # DICE loss
+        # ignore class=1 since this corresponds to the background class.
+        dice = multiclass_dice_loss(
+            input=input,
+            target=target,
+            num_classes=6,
+            sample_class_counts=sample_class_counts,
+            ignore_classes=[1],
+        )
+
+        loss = torch.tensor(0.0, requires_grad=True).to(input.get_device())
+        dices = []
         for i, d in enumerate(dice):
-            if d != torch.nan and d > 0:
-                loss += 100 * ce[i] - torch.log(d)
+            if d > 0:
+                loss += 100 * (ce[i] - torch.log(d))
+                dices.append(d)
             else:
                 loss += 100 * ce[i]
 
-        return loss, dice[dice > 0].mean(), ce.mean()
+        dice_mean = None
+        if len(dices) > 0:
+            dice_mean = torch.stack(dices).mean()
+        return loss, dice_mean, ce.mean()

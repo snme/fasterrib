@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 import torch
 from src.unet.loss import MixedLoss
 from src.unet.unet import UNet
+from torchmetrics import F1Score
 
 
 class LitUNet(pl.LightningModule):
@@ -9,6 +10,7 @@ class LitUNet(pl.LightningModule):
         super().__init__()
         self.unet = unet
         self.class_counts = class_counts
+        self.f1 = F1Score(num_classes=6, ignore_index=1, mdmc_average="samplewise")
 
     def training_step(self, batch, batch_idx):
         # training_step defines the train loop.
@@ -21,6 +23,12 @@ class LitUNet(pl.LightningModule):
         if dice:
             self.log("train_dice", dice, prog_bar=True)
         self.log("train_ce", ce, prog_bar=True)
+
+        y_pred = torch.argmax(out, dim=1).flatten(start_dim=1)
+        y_target = torch.argmax(label, dim=1).flatten(start_dim=1)
+        f1 = self.f1(y_pred, y_target)
+        self.log("train_f1", f1, prog_bar=True)
+
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -30,14 +38,20 @@ class LitUNet(pl.LightningModule):
         label = batch["label"]
         out = self.unet(img)
         loss, dice, ce = loss_fn(out, label, class_counts=self.class_counts)
-        return loss, dice, ce
+
+        y_pred = torch.argmax(out, dim=1).flatten(start_dim=1)
+        y_target = torch.argmax(label, dim=1).flatten(start_dim=1)
+        f1 = self.f1(y_pred, y_target)
+        return loss, dice, ce, f1
 
     def validation_epoch_end(self, outputs):
         loss = torch.stack([x[0] for x in outputs]).mean()
         ce = torch.stack([x[2] for x in outputs]).mean()
+        f1 = torch.stack([x[3] for x in outputs]).mean()
 
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_ce", ce, prog_bar=True)
+        self.log("val_f1", f1, prog_bar=True)
 
         dices = [x[1] for x in outputs if x[1]]
         if len(dices) > 0:
@@ -45,5 +59,5 @@ class LitUNet(pl.LightningModule):
             self.log("val_dice", dice, prog_bar=True)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-6)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
         return optimizer

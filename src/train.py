@@ -27,6 +27,7 @@ batch_size = 16
 
 def train(data_loader, val_loader=None):
     class_counts = torch.load(class_counts_path)
+    class_counts.requires_grad_(False)
     model = LitUNet(unet=UNet(), class_counts=class_counts)
     model = model.to(device)
 
@@ -56,7 +57,7 @@ def main():
     val_data = RFCDataset(
         data_dir="./data/ribfrac-challenge/validation/prepared",
     )
-    val_indices = torch.randperm(len(val_data))
+    val_indices = torch.randperm(len(val_data))[:4000]
     val_subset = Subset(val_data, val_indices)
     train_loader = DataLoader(data, batch_size=batch_size, num_workers=24, shuffle=True)
     val_loader = DataLoader(val_subset, batch_size=batch_size, num_workers=24)
