@@ -106,8 +106,8 @@ def prepare_data(img_dir, label_dir, info_path, out_dir, class_counts_path):
         assert label.max() <= 5
 
         # Sum class counts
-        for i in range(n_classes):
-            class_counts[i] += label[label == i].sum()
+        for c in range(n_classes):
+            class_counts[c] += label[label == c].sum()
 
         label = torch.nn.functional.one_hot(label, num_classes=6)
         label = label.type(torch.int8)
