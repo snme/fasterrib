@@ -49,19 +49,26 @@ val_class_counts_path = os.path.join(val_dir, "class_counts.pt")
 n_classes = 6
 
 
+def map_labels(label, label_to_code):
+    label_ids = np.array(list(label_to_code.keys()))
+    codes = np.array(list(label_to_code.values()))
+    label_mapping = np.zeros(label_ids.max() + 1, dtype=codes.dtype)
+    label_mapping[label_ids] = codes
+
+
 def prepare_data(img_dir, label_dir, info_path, out_dir, class_counts_path):
-    label_id_to_code = {}
+    label_map = {}
     with open(info_path, newline="") as f:
         reader = csv.DictReader(f, delimiter=",")
         for row in reader:
+            public_id = row["public_id"]
             label_id = int(row["label_id"])
             code = int(row["label_code"])
-            label_id_to_code[label_id] = code
 
-    label_ids = np.array(list(label_id_to_code.keys()))
-    codes = np.array(list(label_id_to_code.values()))
-    label_mapping = np.zeros(label_ids.max() + 1, dtype=codes.dtype)
-    label_mapping[label_ids] = codes
+            if public_id not in label_map:
+                label_map[public_id] = {}
+
+            label_map[public_id][label_id] = code
 
     img_paths = [path for path in Path(img_dir).glob("*.nii.gz")]
     img_paths.sort()
@@ -75,6 +82,8 @@ def prepare_data(img_dir, label_dir, info_path, out_dir, class_counts_path):
     for i, (img_path, label_path) in tqdm(
         enumerate(zip(img_paths, label_paths)), total=len(img_paths)
     ):
+        public_id = img_path.name.strip("-image.nii.gz")
+
         img = nib.load(img_path).get_fdata().astype(np.float32)
 
         label = nib.load(label_path).get_fdata().astype(np.int8)
@@ -90,7 +99,7 @@ def prepare_data(img_dir, label_dir, info_path, out_dir, class_counts_path):
         label = torch.as_tensor(label, dtype=torch.long)
 
         # map all label ids to codes
-        label.apply_(label_id_to_code.get)
+        label = label.apply_(label_map[public_id].get)
         label += 1  # Force labels to be in range [0, 5]. https://zenodo.org/record/3893508#.YoL-wnXMJH5
 
         assert label.min() >= 0

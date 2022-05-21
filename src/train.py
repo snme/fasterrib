@@ -28,6 +28,7 @@ batch_size = 16
 def train(data_loader, val_loader=None):
     class_counts = torch.load(class_counts_path)
     class_counts.requires_grad_(False)
+    class_counts = class_counts.to(device)
     model = LitUNet(unet=UNet(), class_counts=class_counts)
     model = model.to(device)
 
