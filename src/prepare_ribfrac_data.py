@@ -37,9 +37,12 @@ val_info_path = os.path.join(
     dirname, "../data/ribfrac-challenge/validation/ribfrac-val-info.csv"
 )
 
-
+train_dir = os.path.join(dirname, "../data/ribfrac-challenge/training/")
 train_out_dir = os.path.join(dirname, "../data/ribfrac-challenge/training/prepared/")
 val_out_dir = os.path.join(dirname, "../data/ribfrac-challenge/validation/prepared/")
+class_counts_path = os.path.join(train_dir, "class_counts.pt")
+
+n_classes = 6
 
 
 def prepare_data(img_dir, label_dir, info_path, out_dir):
@@ -63,6 +66,8 @@ def prepare_data(img_dir, label_dir, info_path, out_dir):
 
     assert len(img_paths) == len(label_paths)
 
+    class_counts = torch.zeros((n_classes,), dtype=torch.long)
+
     for i, (img_path, label_path) in tqdm(
         enumerate(zip(img_paths, label_paths)), total=len(img_paths)
     ):
@@ -79,6 +84,10 @@ def prepare_data(img_dir, label_dir, info_path, out_dir):
 
         img = torch.as_tensor(label, dtype=torch.float32)
         label = torch.as_tensor(label, dtype=torch.long)
+
+        # Sum class counts
+        for i in range(n_classes):
+            class_counts[i] += label[label == i].sum()
 
         # map all label ids to codes
         label.apply_(label_id_to_code.get)
@@ -100,6 +109,8 @@ def prepare_data(img_dir, label_dir, info_path, out_dir):
             torch.save(
                 (img[s].clone(), label[s].clone()), gzip.GzipFile(out_path, "wb")
             )
+
+    torch.save(class_counts, class_counts_path)
 
 
 def prepare_train():

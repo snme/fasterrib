@@ -1,0 +1,22 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "train",
+      "type": "python",
+      "request": "launch",
+      "module": "src.train",
+      "justMyCode": true
+    },
+    {
+      "name": "get_class_counts",
+      "type": "python",
+      "request": "launch",
+      "module": "src.get_class_counts",
+      "justMyCode": true
+    }
+  ]
+}

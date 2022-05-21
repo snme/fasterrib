@@ -20,11 +20,14 @@ parser.add_argument(
     "--wandb-api-key", help="W&B API KEY for experiment visualization", required=False
 )
 
+train_dir = os.path.join(dirname, "../data/ribfrac-challenge/training/")
+class_counts_path = os.path.join(train_dir, "class_counts.pt")
 batch_size = 16
 
 
 def train(data_loader, val_loader=None):
-    model = LitUNet(UNet())
+    class_counts = torch.load(class_counts_path)
+    model = LitUNet(unet=UNet(), class_counts=class_counts)
     model = model.to(device)
 
     wandb_logger = WandbLogger(project="ribfrac")
