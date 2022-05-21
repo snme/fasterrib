@@ -85,16 +85,16 @@ def prepare_data(img_dir, label_dir, info_path, out_dir):
         img = torch.as_tensor(label, dtype=torch.float32)
         label = torch.as_tensor(label, dtype=torch.long)
 
-        # Sum class counts
-        for i in range(n_classes):
-            class_counts[i] += label[label == i].sum()
-
         # map all label ids to codes
         label.apply_(label_id_to_code.get)
         label += 1  # Force labels to be in range [0, 5]. https://zenodo.org/record/3893508#.YoL-wnXMJH5
 
         assert label.min() >= 0
         assert label.max() <= 5
+
+        # Sum class counts
+        for i in range(n_classes):
+            class_counts[i] += label[label == i].sum()
 
         label = torch.nn.functional.one_hot(label, num_classes=6)
         label = label.type(torch.int8)

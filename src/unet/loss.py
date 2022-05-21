@@ -56,7 +56,7 @@ def multiclass_dice_loss(
         if index in ignore_classes:
             continue
 
-        gtz = class_counts[:, index] > 0
+        gtz = class_counts[index] > 0
 
         dices.append(gtz * dice_loss(input[:, index], target[:, index]))
 
@@ -72,34 +72,6 @@ class MixedLoss(nn.Module):
         self.alpha = alpha
         self.focal = FocalLoss(gamma)
         self.cross_entropy = nn.CrossEntropyLoss(reduction="none")
-
-    def get_class_counts(self, target, num_classes):
-        counts = torch.zeros(
-            (
-                target.size(0),
-                num_classes,
-            ),
-            dtype=torch.float32,
-            device=target.get_device(),
-        )
-        for i in range(num_classes):
-            counts[:, i] += (target == i).sum(dim=(1, 2))
-        return counts
-
-    def get_class_weights(self, target, num_classes):
-        weights = torch.ones(
-            (
-                target.size(0),
-                num_classes,
-            ),
-            dtype=torch.float32,
-            device=target.get_device(),
-        )
-        for i in range(num_classes):
-            weights[:, i] += (target == i).sum(dim=(1, 2))
-        weights = 1 / weights
-        weights = weights / (weights.sum(dim=1)).unsqueeze(1)
-        return weights
 
     def forward(self, input, target, class_counts: torch.Tensor):
         # Weighted cross-entropy loss
