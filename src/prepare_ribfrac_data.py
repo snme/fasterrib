@@ -37,15 +37,19 @@ val_info_path = os.path.join(
     dirname, "../data/ribfrac-challenge/validation/ribfrac-val-info.csv"
 )
 
-train_dir = os.path.join(dirname, "../data/ribfrac-challenge/training/")
+train_dir = os.path.join(dirname, "../data/ribfrac-challenge/validation/")
+val_dir = os.path.join(dirname, "../data/ribfrac-challenge/training/")
+
 train_out_dir = os.path.join(dirname, "../data/ribfrac-challenge/training/prepared/")
 val_out_dir = os.path.join(dirname, "../data/ribfrac-challenge/validation/prepared/")
-class_counts_path = os.path.join(train_dir, "class_counts.pt")
+
+train_class_counts_path = os.path.join(train_dir, "class_counts.pt")
+val_class_counts_path = os.path.join(val_dir, "class_counts.pt")
 
 n_classes = 6
 
 
-def prepare_data(img_dir, label_dir, info_path, out_dir):
+def prepare_data(img_dir, label_dir, info_path, out_dir, class_counts_path):
     label_id_to_code = {}
     with open(info_path, newline="") as f:
         reader = csv.DictReader(f, delimiter=",")
@@ -120,6 +124,7 @@ def prepare_train():
         label_dir=train_labels_dir,
         info_path=train_info_path,
         out_dir=train_out_dir,
+        class_counts_path=train_class_counts_path,
     )
 
 
@@ -130,6 +135,7 @@ def prepare_val():
         label_dir=val_labels_dir,
         info_path=val_info_path,
         out_dir=val_out_dir,
+        class_counts_path=val_class_counts_path,
     )
 
 

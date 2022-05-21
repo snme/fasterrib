@@ -46,6 +46,8 @@ def train(data_loader, val_loader=None):
         callbacks=[checkpoint_callback],
         max_epochs=2,
         logger=wandb_logger,
+        track_grad_norm=2,
+        detect_anomaly=True,
     )
     trainer.fit(model=model, train_dataloaders=data_loader, val_dataloaders=val_loader)
 

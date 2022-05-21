@@ -66,8 +66,9 @@ class MixedLoss(nn.Module):
     def forward(self, input, target, class_counts: torch.Tensor):
         # Weighted cross-entropy loss
         target_indices = torch.argmax(target, dim=1)  # one-hot -> indices
-        weights = (class_counts + 1) / (class_counts + 1).sum()
+        weights = (class_counts + 10000) / (class_counts + 10000).sum()
         weights = 1 / weights
+        weights = weights / weights.sum()
         ce = F.cross_entropy(input, target_indices, weight=weights, reduction="none")
         ce = ce.sum(dim=(1, 2)) / weights[target_indices].sum(dim=(1, 2))
 
@@ -83,16 +84,15 @@ class MixedLoss(nn.Module):
             ignore_classes=[1],
         )
 
-        loss = torch.tensor(0.0, requires_grad=True).to(input.get_device())
-        dices = []
-        for i, d in enumerate(dice):
-            if d > 0:
-                loss += 100 * (ce[i] - torch.log(d))
-                dices.append(d)
-            else:
-                loss += 100 * ce[i]
+        dice_loss = torch.where(
+            dice > 0,
+            -torch.log(dice + 1e-8),
+            torch.tensor(
+                0, dtype=torch.float, device=input.get_device(), requires_grad=False
+            ),
+        )
 
-        dice_mean = None
-        if len(dices) > 0:
-            dice_mean = torch.stack(dices).mean()
-        return loss, dice_mean, ce.mean()
+        loss = ce + 10 * dice_loss
+
+        dice_mean = torch.sum(dice) / torch.sum(dice > 0)
+        return loss.mean(), dice_mean, ce.mean()

@@ -20,7 +20,7 @@ class LitUNet(pl.LightningModule):
         out = self.unet(img)
         loss, dice, ce = loss_fn(out, label, class_counts=self.class_counts)
         self.log("train_loss", loss, prog_bar=True)
-        if dice:
+        if not torch.isnan(dice):
             self.log("train_dice", dice, prog_bar=True)
         self.log("train_ce", ce, prog_bar=True)
 
@@ -46,17 +46,14 @@ class LitUNet(pl.LightningModule):
 
     def validation_epoch_end(self, outputs):
         loss = torch.stack([x[0] for x in outputs]).mean()
+        dice = torch.stack([x[1] for x in outputs]).nanmean()
         ce = torch.stack([x[2] for x in outputs]).mean()
         f1 = torch.stack([x[3] for x in outputs]).mean()
 
         self.log("val_loss", loss, prog_bar=True)
+        self.log("val_dice", dice, prog_bar=True)
         self.log("val_ce", ce, prog_bar=True)
         self.log("val_f1", f1, prog_bar=True)
-
-        dices = [x[1] for x in outputs if x[1]]
-        if len(dices) > 0:
-            dice = torch.stack(dices).mean()
-            self.log("val_dice", dice, prog_bar=True)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
