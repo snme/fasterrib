@@ -10,7 +10,7 @@ class LitUNet(pl.LightningModule):
         super().__init__()
         self.unet = unet
         self.class_counts = class_counts
-        self.f1 = F1Score(num_classes=6, ignore_index=1, mdmc_average="samplewise")
+        self.f1 = F1Score(num_classes=6, average="none")
 
     def training_step(self, batch, batch_idx):
         # training_step defines the train loop.
@@ -24,10 +24,12 @@ class LitUNet(pl.LightningModule):
             self.log("train_dice", dice, prog_bar=True)
         self.log("train_ce", ce, prog_bar=True)
 
-        y_pred = torch.argmax(out, dim=1).flatten(start_dim=1)
-        y_target = torch.argmax(label, dim=1).flatten(start_dim=1)
+        y_pred = torch.argmax(out, dim=1).flatten()
+        y_target = torch.argmax(label, dim=1).flatten()
         f1 = self.f1(y_pred, y_target)
-        self.log("train_f1", f1, prog_bar=True)
+
+        for i, c in enumerate(f1):
+            self.log(f"train_f1_{i}", c, prog_bar=False)
 
         return loss
 
@@ -39,8 +41,8 @@ class LitUNet(pl.LightningModule):
         out = self.unet(img)
         loss, dice, ce = loss_fn(out, label, class_counts=self.class_counts)
 
-        y_pred = torch.argmax(out, dim=1).flatten(start_dim=1)
-        y_target = torch.argmax(label, dim=1).flatten(start_dim=1)
+        y_pred = torch.argmax(out, dim=1).flatten()
+        y_target = torch.argmax(label, dim=1).flatten()
         f1 = self.f1(y_pred, y_target)
         return loss, dice, ce, f1
 
@@ -48,12 +50,14 @@ class LitUNet(pl.LightningModule):
         loss = torch.stack([x[0] for x in outputs]).mean()
         dice = torch.stack([x[1] for x in outputs]).nanmean()
         ce = torch.stack([x[2] for x in outputs]).mean()
-        f1 = torch.stack([x[3] for x in outputs]).mean()
+        f1 = torch.stack([x[3] for x in outputs], dim=0).nanmean(dim=0)
 
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_dice", dice, prog_bar=True)
         self.log("val_ce", ce, prog_bar=True)
-        self.log("val_f1", f1, prog_bar=True)
+
+        for i, c in enumerate(f1):
+            self.log(f"val_f1_{i}", c, prog_bar=False)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
