@@ -1,12 +1,14 @@
 import csv
 import gzip
+import typing as t
 from functools import lru_cache
 from pathlib import Path
 
-import nibabel as nib
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+
+from src.transforms import MinMaxNorm, Window
 
 
 class RFCDataset(Dataset):
@@ -18,9 +20,9 @@ class RFCDataset(Dataset):
             data_dir (string): Path to the directory of preprepared data files.
         """
         self.data_dir = data_dir
-
         paths = [path for path in Path(data_dir).glob("slice_pair_*.pt.gz")]
         self.paths = paths
+        self.transforms = [Window(-200, 1000), MinMaxNorm(-200, 1000)]
 
     def __len__(self):
         return len(self.paths)
@@ -30,6 +32,8 @@ class RFCDataset(Dataset):
             idx = idx.tolist()
 
         img, label = self.load_data_file(idx)
+
+        img = self.apply_transforms(img)
 
         img = img[np.newaxis, :]
         label = label.permute(2, 0, 1)
@@ -42,3 +46,8 @@ class RFCDataset(Dataset):
     def load_data_file(self, i):
         (img, label) = torch.load(gzip.GzipFile(self.paths[i], "rb"))
         return (img, label)
+
+    def apply_transforms(self, img):
+        for t in self.transforms:
+            img = t(img)
+        return img
