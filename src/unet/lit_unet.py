@@ -27,9 +27,7 @@ class LitUNet(pl.LightningModule):
         y_pred = torch.argmax(out, dim=1).flatten()
         y_target = torch.argmax(label, dim=1).flatten()
         f1 = self.f1(y_pred, y_target)
-
-        for i, c in enumerate(f1):
-            self.log(f"train_f1_{i}", c, prog_bar=False)
+        self.log("train_f1", {i: c for (i, c) in enumerate(f1)}, prog_bar=False)
 
         return loss
 
@@ -55,9 +53,7 @@ class LitUNet(pl.LightningModule):
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_dice", dice, prog_bar=True)
         self.log("val_ce", ce, prog_bar=True)
-
-        for i, c in enumerate(f1):
-            self.log(f"val_f1_{i}", c, prog_bar=False)
+        self.log("val_f1", {i: c for (i, c) in enumerate(f1)}, prog_bar=False)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)

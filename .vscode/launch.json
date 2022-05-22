@@ -12,6 +12,14 @@
       "justMyCode": true
     },
     {
+      "name": "prepare_data",
+      "type": "python",
+      "request": "launch",
+      "module": "src.prepare_ribfrac_data",
+      "justMyCode": true,
+      "args": ["--split", "all"]
+    },
+    {
       "name": "get_class_counts",
       "type": "python",
       "request": "launch",

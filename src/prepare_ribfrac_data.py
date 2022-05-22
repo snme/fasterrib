@@ -57,6 +57,11 @@ def map_labels(label, label_to_code):
 
 
 def prepare_data(img_dir, label_dir, info_path, out_dir, class_counts_path):
+    pos_dir = os.path.join(out_dir, "pos")
+    neg_dir = os.path.join(out_dir, "neg")
+    os.makedirs(pos_dir, exist_ok=True)
+    os.makedirs(neg_dir, exist_ok=True)
+
     label_map = {}
     with open(info_path, newline="") as f:
         reader = csv.DictReader(f, delimiter=",")
@@ -109,16 +114,13 @@ def prepare_data(img_dir, label_dir, info_path, out_dir, class_counts_path):
         for c in range(n_classes):
             class_counts[c] += label[label == c].sum()
 
-        label = torch.nn.functional.one_hot(label, num_classes=6)
-        label = label.type(torch.int8)
-
-        assert list(label.size()) == [n_slices, 512, 512, 6]
-
-        if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
+        assert list(label.size()) == [n_slices, 512, 512]
 
         for s in range(n_slices):
-            out_path = os.path.join(out_dir, f"slice_pair_{i}_{s}.pt.gz")
+            if torch.any(label[s] != 1).item():
+                out_path = os.path.join(pos_dir, f"slice_pair_{i}_{s}.pt.gz")
+            else:
+                out_path = os.path.join(neg_dir, f"slice_pair_{i}_{s}.pt.gz")
             torch.save(
                 (img[s].clone(), label[s].clone()), gzip.GzipFile(out_path, "wb")
             )
