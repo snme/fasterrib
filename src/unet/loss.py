@@ -53,22 +53,6 @@ class MixedLoss(nn.Module):
         super().__init__()
         self.alpha = alpha
 
-        dirname = os.path.dirname(__file__)
-        neg_dir = os.path.join(
-            dirname, "../data/ribfrac-challenge/training/prepared/neg"
-        )
-        self.neg_dataset = RFCDataset(data_dir=neg_dir)
-        self.neg_loader = DataLoader(self.neg_dataset, shuffle=True, batch_size=4)
-        self.neg_iter = iter(self.neg_loader)
-
-    def get_neg_samples(self):
-        try:
-            neg_batch = next(self.neg_iter)
-            return neg_batch
-        except StopIteration:
-            self.neg_iter = iter(self.neg_loader)
-            return next(self.neg_iter)
-
     def get_sample_class_counts(self, target, n_classes):
         counts = torch.zeros(
             (
@@ -82,25 +66,23 @@ class MixedLoss(nn.Module):
             counts[:, i] += (target == i).sum(dim=(1, 2))
         return counts
 
-    def forward(self, input, target, class_counts: torch.Tensor):
-        neg_samples = self.get_neg_samples()
-        target = torch.cat([target, neg_samples], dim=0)
-
+    def forward(self, input, target, class_counts: torch.Tensor, is_training: bool):
         # Weighted cross-entropy loss
-        target_indices = torch.argmax(target, dim=1)  # one-hot -> indices
         weights = (class_counts + 1) / (class_counts + 1).sum()
         weights = 1 / weights
         weights = weights / weights.sum()
-        ce = F.cross_entropy(input, target_indices, weight=weights, reduction="none")
-        ce = ce.sum(dim=(1, 2)) / weights[target_indices].sum(dim=(1, 2))
-
-        sample_class_counts = self.get_sample_class_counts(target_indices, 6)
+        ce = F.cross_entropy(input, target, weight=weights, reduction="none")
+        ce = ce.sum(dim=(1, 2)) / weights[target].sum(dim=(1, 2))
 
         # DICE loss
         # ignore class=1 since this corresponds to the background class.
+        sample_class_counts = self.get_sample_class_counts(target, 6)
+        target_one_hot = torch.nn.functional.one_hot(target, num_classes=6)
+        target_one_hot = target_one_hot.type(torch.int8).permute(0, 3, 1, 2)
+
         dice = multiclass_dice_loss(
             input=input,
-            target=target,
+            target=target_one_hot,
             num_classes=6,
             sample_class_counts=sample_class_counts,
             ignore_classes=[1],

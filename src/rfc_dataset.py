@@ -36,7 +36,6 @@ class RFCDataset(Dataset):
         img = self.apply_transforms(img)
 
         img = img[np.newaxis, :]
-        label = label.permute(2, 0, 1)
 
         example = {"image": img, "label": label}
 

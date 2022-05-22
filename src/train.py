@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import ConcatDataset, DataLoader, Subset
 
 from src.rfc_dataset import RFCDataset
 from src.unet.lit_unet import LitUNet
@@ -22,7 +22,7 @@ parser.add_argument(
 
 train_dir = os.path.join(dirname, "../data/ribfrac-challenge/training/")
 class_counts_path = os.path.join(train_dir, "class_counts.pt")
-batch_size = 16
+batch_size = 12
 
 
 def train(data_loader, val_loader=None):
@@ -55,15 +55,23 @@ def train(data_loader, val_loader=None):
 
 def main():
     data = RFCDataset(
-        data_dir="./data/ribfrac-challenge/training/prepared",
+        data_dir="./data/ribfrac-challenge/training/prepared/pos",
     )
-    val_data = RFCDataset(
-        data_dir="./data/ribfrac-challenge/validation/prepared",
+
+    val_pos = RFCDataset(
+        data_dir="./data/ribfrac-challenge/validation/prepared/pos",
     )
-    val_indices = torch.randperm(len(val_data))[:4000]
-    val_subset = Subset(val_data, val_indices)
+    val_neg = RFCDataset(
+        data_dir="./data/ribfrac-challenge/validation/prepared/neg",
+    )
+    val_pos_subset = Subset(val_pos, torch.randperm(len(val_pos))[:2000])
+    val_neg_subset = Subset(val_neg, torch.randperm(len(val_pos))[:2000])
+    val_data = ConcatDataset([val_pos_subset, val_neg_subset])
+
     train_loader = DataLoader(data, batch_size=batch_size, num_workers=24, shuffle=True)
-    val_loader = DataLoader(val_subset, batch_size=batch_size, num_workers=24)
+    val_loader = DataLoader(
+        val_data, batch_size=batch_size, num_workers=24, shuffle=True
+    )
     print("Num training examples:", len(data))
     print("Num validation examples:", len(val_data))
     train(train_loader, val_loader)
