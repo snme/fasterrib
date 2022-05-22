@@ -1,5 +1,6 @@
 import argparse
 import os
+from datetime import datetime
 
 import pytorch_lightning as pl
 import torch
@@ -22,7 +23,7 @@ parser.add_argument(
 
 train_dir = os.path.join(dirname, "../data/ribfrac-challenge/training/")
 class_counts_path = os.path.join(train_dir, "class_counts.pt")
-batch_size = 12
+batch_size = 8
 
 
 def train(data_loader, val_loader=None):
@@ -36,7 +37,9 @@ def train(data_loader, val_loader=None):
 
     # train model
     checkpoint_callback = ModelCheckpoint(
-        dirpath=os.path.join(dirname, "../checkpoints"),
+        dirpath=os.path.join(
+            dirname, f"../checkpoints-{datetime.now().strftime('%m%d-%H%M')}"
+        ),
         save_top_k=2,
         monitor="val_loss",
     )
@@ -45,9 +48,8 @@ def train(data_loader, val_loader=None):
         devices=-1,
         val_check_interval=200,
         callbacks=[checkpoint_callback],
-        max_epochs=2,
+        max_epochs=5,
         logger=wandb_logger,
-        track_grad_norm=2,
         detect_anomaly=True,
     )
     trainer.fit(model=model, train_dataloaders=data_loader, val_dataloaders=val_loader)

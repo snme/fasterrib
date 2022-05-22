@@ -1,5 +1,4 @@
 import os
-from tracemalloc import is_tracing
 
 import pytorch_lightning as pl
 import torch
@@ -42,16 +41,15 @@ class LitUNet(pl.LightningModule):
         img = torch.cat([img, neg_batch["image"].to(img.get_device())], dim=0)
         label = torch.cat([label, neg_batch["label"].to(img.get_device())], dim=0)
 
-        loss_fn = MixedLoss(10.0, 2.0)
+        loss_fn = MixedLoss()
 
         out = self.unet(img)
-        loss, dice, ce = loss_fn(
-            out, label, class_counts=self.class_counts, is_training=True
-        )
+        loss, dice, ce, bin_dice = loss_fn(out, label, class_counts=self.class_counts)
         self.log("train_loss", loss, prog_bar=True)
+        self.log("train_ce", ce, prog_bar=True)
+        self.log("train_binary_dice", bin_dice, prog_bar=True)
         if not torch.isnan(dice):
             self.log("train_dice", dice, prog_bar=True)
-        self.log("train_ce", ce, prog_bar=True)
 
         y_pred = torch.argmax(out, dim=1)
         assert y_pred.size() == label.size()
@@ -62,27 +60,27 @@ class LitUNet(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         # this is the test loop
-        loss_fn = MixedLoss(10.0, 2.0)
+        loss_fn = MixedLoss()
         img = batch["image"]
         label = batch["label"]
         out = self.unet(img)
-        loss, dice, ce = loss_fn(
-            out, label, class_counts=self.class_counts, is_training=False
-        )
+        loss, dice, ce, bin_dice = loss_fn(out, label, class_counts=self.class_counts)
 
         y_pred = torch.argmax(out, dim=1)
         assert y_pred.size() == label.size()
         f1 = self.f1(y_pred.flatten(), label.flatten())
-        return loss, dice, ce, f1
+        return loss, dice, ce, f1, bin_dice
 
     def validation_epoch_end(self, outputs):
         loss = torch.stack([x[0] for x in outputs]).mean()
         dice = torch.stack([x[1] for x in outputs]).nanmean()
         ce = torch.stack([x[2] for x in outputs]).mean()
         f1 = torch.stack([x[3] for x in outputs], dim=0).nanmean(dim=0)
+        bin_dice = torch.stack([x[4] for x in outputs], dim=0).mean()
 
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_dice", dice, prog_bar=True)
+        self.log("val_bin_dice", bin_dice, prog_bar=True)
         self.log("val_ce", ce, prog_bar=True)
         self.log("val_f1", {i: c for (i, c) in enumerate(f1)}, prog_bar=False)
 

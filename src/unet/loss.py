@@ -8,7 +8,7 @@ from torch import nn
 from torch.utils.data import DataLoader, default_collate
 
 
-def dice_loss(input, target):
+def dice_score(input, target):
     smooth = 1.0
     iflat = input.flatten(start_dim=1)
     tflat = target.flatten(start_dim=1)
@@ -18,7 +18,7 @@ def dice_loss(input, target):
     )
 
 
-def multiclass_dice_loss(
+def multiclass_dice(
     input,
     target,
     num_classes: int,
@@ -37,7 +37,7 @@ def multiclass_dice_loss(
             continue
 
         mask.append(sample_class_counts[:, index] > 0)
-        dices.append(dice_loss(input[:, index], target[:, index]))
+        dices.append(dice_score(input[:, index], target[:, index]))
 
     # mask out classes with zero counts
     mask = torch.stack(mask, dim=1)
@@ -48,10 +48,22 @@ def multiclass_dice_loss(
     return dice
 
 
+def get_binary_dice_score(
+    input,
+    target,
+):
+    input = F.softmax(input, dim=1)
+
+    # Sum the non-background probabilities to get a 0/1 probability
+    input = input.sum(dim=1) - input[:, 1]
+    dice = dice_score(input, (target != 1))
+    return dice
+
+
 class MixedLoss(nn.Module):
-    def __init__(self, alpha, gamma):
+    def __init__(self):
         super().__init__()
-        self.alpha = alpha
+        pass
 
     def get_sample_class_counts(self, target, n_classes):
         counts = torch.zeros(
@@ -66,7 +78,7 @@ class MixedLoss(nn.Module):
             counts[:, i] += (target == i).sum(dim=(1, 2))
         return counts
 
-    def forward(self, input, target, class_counts: torch.Tensor, is_training: bool):
+    def forward(self, input, target, class_counts: torch.Tensor):
         # Weighted cross-entropy loss
         weights = (class_counts + 1) / (class_counts + 1).sum()
         weights = 1 / weights
@@ -80,7 +92,7 @@ class MixedLoss(nn.Module):
         target_one_hot = torch.nn.functional.one_hot(target, num_classes=6)
         target_one_hot = target_one_hot.type(torch.int8).permute(0, 3, 1, 2)
 
-        dice = multiclass_dice_loss(
+        multi_dice = multiclass_dice(
             input=input,
             target=target_one_hot,
             num_classes=6,
@@ -88,9 +100,12 @@ class MixedLoss(nn.Module):
             ignore_classes=[1],
         )
 
+        # For reporting purposes only
+        binary_dice = get_binary_dice_score(input, target)
+
         dice_loss = torch.where(
-            dice > 0,
-            -torch.log(dice + 1e-8),
+            multi_dice > 0,
+            -torch.log(multi_dice + 1e-8),
             torch.tensor(
                 0, dtype=torch.float, device=input.get_device(), requires_grad=False
             ),
@@ -98,5 +113,5 @@ class MixedLoss(nn.Module):
 
         loss = ce + 10 * dice_loss
 
-        dice_mean = torch.sum(dice) / torch.sum(dice > 0)
-        return loss.mean(), dice_mean, ce.mean()
+        dice_mean = torch.sum(multi_dice) / torch.sum(multi_dice > 0)
+        return loss.mean(), dice_mean, ce.mean(), binary_dice.mean()
