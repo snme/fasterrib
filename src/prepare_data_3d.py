@@ -7,7 +7,6 @@ from pathlib import Path
 import nibabel as nib
 import numpy as np
 import torch
-from torch.utils.data import Dataset
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser(
@@ -26,10 +25,10 @@ train_info_path = os.path.join(train_dir, "ribfrac-train-info-all.csv")
 val_images_dir = os.path.join(val_dir, "ribfrac-val-images")
 val_labels_dir = os.path.join(val_dir, "ribfrac-val-labels")
 val_info_path = os.path.join(val_dir, "ribfrac-val-info.csv")
-train_out_dir = os.path.join(train_dir, "prepared/")
-val_out_dir = os.path.join(val_dir, "prepared/")
-train_class_counts_path = os.path.join(train_dir, "class_counts.pt")
-val_class_counts_path = os.path.join(val_dir, "class_counts.pt")
+train_out_dir = os.path.join(train_dir, "prepared_3d/")
+val_out_dir = os.path.join(val_dir, "prepared_3d/")
+train_class_counts_path = os.path.join(train_dir, "class_counts_3d.pt")
+val_class_counts_path = os.path.join(val_dir, "class_counts_3d.pt")
 
 n_classes = 6
 
@@ -42,10 +41,7 @@ def map_labels(label, label_to_code):
 
 
 def prepare_data(img_dir, label_dir, info_path, out_dir, class_counts_path):
-    pos_dir = os.path.join(out_dir, "pos")
-    neg_dir = os.path.join(out_dir, "neg")
-    os.makedirs(pos_dir, exist_ok=True)
-    os.makedirs(neg_dir, exist_ok=True)
+    os.makedirs(out_dir, exist_ok=True)
 
     label_map = {}
     with open(info_path, newline="") as f:
@@ -101,14 +97,8 @@ def prepare_data(img_dir, label_dir, info_path, out_dir, class_counts_path):
 
         assert list(label.size()) == [n_slices, 512, 512]
 
-        for s in range(n_slices):
-            if torch.any(label[s] != 1).item():
-                out_path = os.path.join(pos_dir, f"slice_pair_{i}_{s}.pt.gz")
-            else:
-                out_path = os.path.join(neg_dir, f"slice_pair_{i}_{s}.pt.gz")
-            torch.save(
-                (img[s].clone(), label[s].clone()), gzip.GzipFile(out_path, "wb")
-            )
+        out_path = os.path.join(out_dir, f"{public_id}-{i}.pt.gz")
+        torch.save((img.clone(), label.clone()), gzip.GzipFile(out_path, "wb"))
 
     torch.save(class_counts, class_counts_path)
 
