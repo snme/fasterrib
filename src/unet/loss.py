@@ -1,11 +1,8 @@
-import os
 import typing as t
 
 import torch
 import torch.nn.functional as F
-from src.rfc_dataset import RFCDataset
 from torch import nn
-from torch.utils.data import DataLoader, default_collate
 
 
 def dice_score(input, target):
