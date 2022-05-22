@@ -1,8 +1,11 @@
+import os
 import typing as t
 
 import torch
 import torch.nn.functional as F
+from src.rfc_dataset import RFCDataset
 from torch import nn
+from torch.utils.data import DataLoader, default_collate
 
 
 def dice_loss(input, target):
@@ -50,6 +53,22 @@ class MixedLoss(nn.Module):
         super().__init__()
         self.alpha = alpha
 
+        dirname = os.path.dirname(__file__)
+        neg_dir = os.path.join(
+            dirname, "../data/ribfrac-challenge/training/prepared/neg"
+        )
+        self.neg_dataset = RFCDataset(data_dir=neg_dir)
+        self.neg_loader = DataLoader(self.neg_dataset, shuffle=True, batch_size=4)
+        self.neg_iter = iter(self.neg_loader)
+
+    def get_neg_samples(self):
+        try:
+            neg_batch = next(self.neg_iter)
+            return neg_batch
+        except StopIteration:
+            self.neg_iter = iter(self.neg_loader)
+            return next(self.neg_iter)
+
     def get_sample_class_counts(self, target, n_classes):
         counts = torch.zeros(
             (
@@ -64,6 +83,9 @@ class MixedLoss(nn.Module):
         return counts
 
     def forward(self, input, target, class_counts: torch.Tensor):
+        neg_samples = self.get_neg_samples()
+        target = torch.cat([target, neg_samples], dim=0)
+
         # Weighted cross-entropy loss
         target_indices = torch.argmax(target, dim=1)  # one-hot -> indices
         weights = (class_counts + 1) / (class_counts + 1).sum()
