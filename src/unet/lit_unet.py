@@ -133,7 +133,7 @@ class LitUNet(pl.LightningModule):
         mask = torch.zeros_like(confmat)
         mask[0, 0] = 1
         mask[1, 1] = 1
-        ax = sns.heatmap(confmat, annot=True, cmap="Blues", fmt="g", mask=mask.numpy())
+        ax = sns.heatmap(confmat, annot=True, cmap="YlGnBu", fmt="g", mask=mask.numpy())
         ax.set_title("Confusion Matrix")
         ax.set_xlabel("Predicted Values")
         ax.set_ylabel("Actual Values")
