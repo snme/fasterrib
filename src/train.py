@@ -46,9 +46,9 @@ def train(data_loader, val_loader=None):
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=-1,
-        val_check_interval=200,
+        val_check_interval=400,
         callbacks=[checkpoint_callback],
-        max_epochs=5,
+        max_epochs=10,
         logger=wandb_logger,
         detect_anomaly=True,
     )
