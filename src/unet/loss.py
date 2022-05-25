@@ -106,6 +106,8 @@ class MixedLoss(nn.Module):
         weights = (weights + 1) / (weights + 1).sum()
         weights = 1 / weights
         weights[0] = 0  # ignore the -1 class
+        weights = weights / weights.sum()
+
         ce = F.cross_entropy(input, target, weight=weights, reduction="none")
         ce = ce.sum(dim=(1, 2)) / weights[target].sum(dim=(1, 2))
 
