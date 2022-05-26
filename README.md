@@ -44,9 +44,11 @@ data/
           ...
 ```
 
-# Training (2d model)
+# 2D Model
 
-## Prepare data for training
+## Training
+
+### Prepare data for training
 
 The next step after downloading the RFC data is to run the data preparation script:
 
@@ -56,17 +58,25 @@ python -m src.prepare_ribfrac_data --split all
 
 This will prepare and save each 2d slice of every image. The script takes about 1 hour on our desktop workstation.
 
-## Train
+### Train
 
 ```bash
 python -m src.train
 ```
 
-# Training (3d model)
+## Inference
+
+```bash
+python -m src.infer --in-dir <scans-dir> --out-dir <predictions-dir> --checkpoint <checkpoint-path>
+```
+
+# 3D Model
+
+## Training
 
 Training the 3d-model is similar.
 
-## Prepare data
+### Prepare data
 
 ```bash
 python -m src.prepare_data_3d --split all
@@ -74,7 +84,7 @@ python -m src.prepare_data_3d --split all
 
 This will prepare and save each 2d slice of every image. The script takes about 1 hour on our desktop workstation.
 
-## Train
+### Train
 
 ```bash
 python -m src.train_3d

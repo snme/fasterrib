@@ -3,7 +3,6 @@ import os
 
 import pytorch_lightning as pl
 import torch
-from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import ConcatDataset, DataLoader, Subset
 
 from src.rfc_dataset import RFCDataset
@@ -14,9 +13,8 @@ dirname = os.path.dirname(__file__)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using {device} device")
 
-parser = argparse.ArgumentParser(description="Evaluates the ribfrac model")
-parser.add_argument(
-    "--wandb-api-key", help="W&B API KEY for experiment visualization", required=False
+parser = argparse.ArgumentParser(
+    description="Evaluates the ribfrac model on the full RFC validation set"
 )
 
 batch_size = 8
@@ -31,14 +29,11 @@ def eval(data_loader):
     model.eval()
     model = model.to(device)
 
-    wandb_logger = WandbLogger(project="ribfrac-eval")
-
     # test model
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=-1,
         max_epochs=1,
-        logger=wandb_logger,
         detect_anomaly=True,
     )
     trainer.test(model=model, dataloaders=data_loader)
@@ -62,6 +57,4 @@ def main():
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    if args.wandb_api_key:
-        os.environ["WANDB_API_KEY"] = args.wandb_api_key
     main()

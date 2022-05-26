@@ -110,6 +110,13 @@ class LitUNet(pl.LightningModule):
         self.save_dice_barplot(dice_scores.cpu().numpy()[:, 2:])
         self.save_confusion_matrix(confmat.cpu()[1:, 1:])
 
+    def forward(self, img):
+        """img should have shape (N, H, W)"""
+        logits = self.unet(img)  # (N, C, H, W)
+        logits[:, 0] = float("-inf")  # make sure prediction for -1 class is zero
+        out = torch.softmax(logits, dim=1)
+        return out
+
     def save_f1_plot(self, f1_scores):
         data = pd.DataFrame(
             f1_scores,
