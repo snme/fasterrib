@@ -24,7 +24,7 @@ batch_size = 8
 
 def eval(data_loader):
     model = LitUNet.load_from_checkpoint(
-        "./checkpoints-0522-1743/epoch=4-step=27332.ckpt",
+        "./checkpoints-0525-1018/epoch=6-step=35598.ckpt",
         unet=UNet(),
         class_counts=None,
     )
@@ -52,7 +52,7 @@ def main():
         data_dir="./data/ribfrac-challenge/validation/prepared/neg",
     )
     val_data = ConcatDataset([val_pos, val_neg])
-    val_data = Subset(val_data, torch.randperm(len(val_data))[:100])
+    val_data = Subset(val_data, torch.randperm(len(val_data)))
     val_loader = DataLoader(
         val_data, batch_size=batch_size, num_workers=24, shuffle=True
     )

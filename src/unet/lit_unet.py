@@ -83,7 +83,10 @@ class LitUNet(pl.LightningModule):
         label = batch["label"]
         out = self.unet(img)
         dice_scores = mixed_loss.get_all_dice_scores(out, label)
-        bin_dice = mixed_loss.get_binary_dice_score(out, label)
+
+        softmax_out = mixed_loss.get_softmax_scores(out)
+        bin_dice = mixed_loss.get_binary_dice_score(softmax_out, label)
+
         y_pred = torch.argmax(out, dim=1)
         assert y_pred.size() == label.size()
         self.confusion_matrix(y_pred.flatten(), label.flatten())
@@ -103,14 +106,14 @@ class LitUNet(pl.LightningModule):
             "dice", {str(i): c for (i, c) in enumerate(dice_scores[0])}, prog_bar=False
         )
 
-        self.save_f1_plot(f1.cpu().numpy())
-        self.save_dice_barplot(dice_scores.cpu().numpy())
-        self.save_confusion_matrix(confmat.cpu())
+        self.save_f1_plot(f1.cpu().numpy()[:, 2:])
+        self.save_dice_barplot(dice_scores.cpu().numpy()[:, 2:])
+        self.save_confusion_matrix(confmat.cpu()[1:, 1:])
 
     def save_f1_plot(self, f1_scores):
         data = pd.DataFrame(
             f1_scores,
-            columns=["-1", "0", "1", "2", "3", "4"],
+            columns=["1", "2", "3", "4"],
             index=["F1"],
         )
         ax = sns.barplot(data=data, palette="Blues_d")
@@ -122,7 +125,7 @@ class LitUNet(pl.LightningModule):
     def save_dice_barplot(self, dice_scores):
         data = pd.DataFrame(
             dice_scores,
-            columns=["-1", "0", "1", "2", "3", "4"],
+            columns=["1", "2", "3", "4"],
             index=["DICE"],
         )
         ax = sns.barplot(data=data, palette="Blues_d")
@@ -132,20 +135,24 @@ class LitUNet(pl.LightningModule):
         plt.savefig("dice_barplot.png")
 
     def save_confusion_matrix(self, confmat):
+        plt.clf()
         mask = torch.zeros_like(confmat)
-        mask[0, 0] = 1
-        mask[1, 1] = 1
-        ax = sns.heatmap(confmat, annot=True, cmap="YlGnBu", fmt="g", mask=mask.numpy())
-        ax.set_title("Confusion Matrix")
-        ax.set_xlabel("Predicted Values")
-        ax.set_ylabel("Actual Values")
+        mask[0, 0] = True
 
-        ## Ticket labels - List must be in alphabetical order
-        ax.xaxis.set_ticklabels(["-1", "0", "1", "2", "3", "4"])
-        ax.yaxis.set_ticklabels(["-1", "0", "1", "2", "3", "4"])
+        with sns.axes_style("white"):
+            ax = sns.heatmap(
+                confmat, annot=True, cmap="Blues", fmt="g", mask=mask.numpy()
+            )
+            ax.set_title("Confusion Matrix")
+            ax.set_xlabel("Predicted Values")
+            ax.set_ylabel("Actual Values")
 
-        ## Display the visualization of the Confusion Matrix.
-        plt.savefig("confmat.png")
+            ## Ticket labels - List must be in alphabetical order
+            ax.xaxis.set_ticklabels(["0", "1", "2", "3", "4"])
+            ax.yaxis.set_ticklabels(["0", "1", "2", "3", "4"])
+
+            ## Display the visualization of the Confusion Matrix.
+            plt.savefig("confmat.jpg")
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)

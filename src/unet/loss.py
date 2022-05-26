@@ -86,7 +86,6 @@ class MixedLoss(nn.Module):
                     sample_class_counts=sample_class_counts,
                 )
             )
-        print(scores)
         return torch.stack(scores)
 
     def get_binary_dice_score(
