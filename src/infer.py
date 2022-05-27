@@ -2,6 +2,7 @@ import argparse
 import os
 
 import nibabel as nib
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -9,6 +10,7 @@ from tqdm import tqdm
 from src.inference_dataset import InferenceDataset
 from src.unet.lit_unet import LitUNet
 from src.unet.unet import UNet
+from unet.loss import MixedLoss
 
 dirname = os.path.dirname(__file__)
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -31,22 +33,33 @@ batch_size = 4
 def infer_all(checkpoint, data_loader, out_dir):
     os.makedirs(out_dir, exist_ok=True)
 
-    model = LitUNet(unet=UNet())
-    model.load_from_checkpoint(checkpoint_path=checkpoint)
+    model = LitUNet.load_from_checkpoint(
+        "./checkpoints-0525-1018/epoch=6-step=35598.ckpt",
+        unet=UNet(),
+        class_counts=None,
+    )
+    model.eval()
     model = model.to(device)
 
+    mixed_loss = MixedLoss()
+
     for (img, basename) in tqdm(data_loader):
+
+        img = img.squeeze()  # (SLICES, H, W)
         preds = torch.zeros_like(img)
 
         for i, img_slice in enumerate(img):
-            img_slice.to(device)
-            probs = model(img_slice.unsqueeze(0))
+            img_slice = img_slice.to(device).unsqueeze(0).unsqueeze(0)  # (1, 1, H, W)
+            logits = model(img_slice)
+            probs = mixed_loss.get_softmax_scores(logits)
             preds[i] = torch.argmax(probs, dim=1).cpu()
 
-        img = img.permute(1, 2, 0)  # (SLICES, H, W) -> (H, W, SLICES)
+        preds = preds.permute(1, 2, 0)  # (SLICES, H, W) -> (H, W, SLICES)
 
-        out_path = os.path.join(out_dir, f"{basename}-prediction.nii.gz")
-        nib.save(img.cpu().numpy(), out_path)
+        out_path = os.path.join(out_dir, f"{basename[0]}-prediction.npy")
+
+        with open(out_path, "wb") as f:
+            np.save(f, preds.numpy())
 
 
 def main(args):

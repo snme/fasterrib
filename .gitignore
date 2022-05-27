@@ -10,3 +10,4 @@ wandb/
 checkpoints*/
 *.png
 *.jpg
+inference-results/

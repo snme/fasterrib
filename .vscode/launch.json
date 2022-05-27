@@ -12,6 +12,21 @@
       "justMyCode": true
     },
     {
+      "name": "infer",
+      "type": "python",
+      "request": "launch",
+      "module": "src.infer",
+      "justMyCode": true,
+      "args": [
+        "--in-dir",
+        "./data/ribfrac-challenge/validation/ribfrac-val-images",
+        "--out-dir",
+        "./inference-results",
+        "--checkpoint",
+        "./checkpoints-0525-1018/epoch=6-step=35598.ckpt"
+      ]
+    },
+    {
       "name": "prepare_data",
       "type": "python",
       "request": "launch",

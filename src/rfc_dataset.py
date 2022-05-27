@@ -33,6 +33,9 @@ class RFCDataset(Dataset):
 
         img, label = self.load_data_file(idx)
 
+        assert label.min() >= 0
+        assert label.min() <= 5
+
         img = self.apply_transforms(img)
 
         img = img[np.newaxis, :]

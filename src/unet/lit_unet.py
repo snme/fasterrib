@@ -14,7 +14,7 @@ from torchmetrics import ConfusionMatrix, F1Score
 
 
 class LitUNet(pl.LightningModule):
-    def __init__(self, unet: UNet, class_counts: t.Optional[torch.Tensor]):
+    def __init__(self, unet: UNet, class_counts: t.Optional[torch.Tensor] = None):
         super().__init__()
         self.unet = unet
         self.class_counts = class_counts
@@ -113,9 +113,7 @@ class LitUNet(pl.LightningModule):
     def forward(self, img):
         """img should have shape (N, H, W)"""
         logits = self.unet(img)  # (N, C, H, W)
-        logits[:, 0] = float("-inf")  # make sure prediction for -1 class is zero
-        out = torch.softmax(logits, dim=1)
-        return out
+        return logits
 
     def save_f1_plot(self, f1_scores):
         data = pd.DataFrame(

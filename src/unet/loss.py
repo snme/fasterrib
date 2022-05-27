@@ -19,27 +19,20 @@ def multiclass_dice(
     softmax_input,
     target,
     num_classes: int,
-    sample_class_counts,
     ignore_classes: t.Optional[t.List[int]] = None,
 ):
     if ignore_classes is None:
         ignore_classes = []
 
     dices = []
-    mask = []
     for index in range(num_classes):
         if index in ignore_classes:
             continue
 
-        mask.append(sample_class_counts[:, index] > 0)
         dices.append(dice_score(softmax_input[:, index], target[:, index]))
 
-    # mask out classes with zero counts
-    mask = torch.stack(mask, dim=1)
     dice = torch.stack(dices, dim=1)
-    dice = (dice * mask).sum(dim=1) / (
-        mask.sum(dim=1) + 1e-8
-    )  # Average dice over classes
+    dice = dice.sum(dim=1) / len(dices)
     return dice
 
 
@@ -47,19 +40,6 @@ class MixedLoss(nn.Module):
     def __init__(self, n_classes=6):
         super().__init__()
         self.n_classes = n_classes
-
-    def get_sample_class_counts(self, target, n_classes):
-        counts = torch.zeros(
-            (
-                target.size(0),
-                n_classes,
-            ),
-            dtype=torch.long,
-            requires_grad=False,
-        ).to(target.get_device())
-        for i in range(n_classes):
-            counts[:, i] += (target == i).sum(dim=(1, 2))
-        return counts
 
     def get_class_dice_score(
         self, softmax_input, target_one_hot, class_, sample_class_counts
@@ -70,7 +50,6 @@ class MixedLoss(nn.Module):
         return dice
 
     def get_all_dice_scores(self, input, target):
-        sample_class_counts = self.get_sample_class_counts(target, 6)
         target_one_hot = torch.nn.functional.one_hot(target, num_classes=6)
         target_one_hot = target_one_hot.type(torch.int8).permute(0, 3, 1, 2)
 
@@ -80,10 +59,7 @@ class MixedLoss(nn.Module):
         for i in range(self.n_classes):
             scores.append(
                 self.get_class_dice_score(
-                    softmax_input=softmax_input,
-                    target_one_hot=target_one_hot,
-                    class_=i,
-                    sample_class_counts=sample_class_counts,
+                    softmax_input=softmax_input, target_one_hot=target_one_hot, class_=i
                 )
             )
         return torch.stack(scores)
@@ -95,7 +71,9 @@ class MixedLoss(nn.Module):
     ):
         # Sum the non-background probabilities to get a 0/1 probability
         softmax_input = softmax_input.sum(dim=1) - softmax_input[:, 1]
-        dice = dice_score(softmax_input, (target != 1))  # non-background dice score
+        dice = dice_score(
+            softmax_input, (target != 1).type(torch.uint8)
+        )  # non-background dice score
         return dice
 
     def get_softmax_scores(self, input):
@@ -103,7 +81,7 @@ class MixedLoss(nn.Module):
         # This causes the softmax score for it to be zero.
         softmax_input = input.clone()
         softmax_input[:, 0] = float("-inf")
-        softmax_input = F.softmax(input, dim=1)
+        softmax_input = F.softmax(softmax_input, dim=1)
         return softmax_input
 
     def forward(self, input, target, class_counts: torch.Tensor):
@@ -119,7 +97,6 @@ class MixedLoss(nn.Module):
 
         # DICE loss
         # ignore class=1 since this corresponds to the background class.
-        sample_class_counts = self.get_sample_class_counts(target, 6)
         target_one_hot = torch.nn.functional.one_hot(target, num_classes=6)
         target_one_hot = target_one_hot.type(torch.int8).permute(0, 3, 1, 2)
 
@@ -131,7 +108,6 @@ class MixedLoss(nn.Module):
             softmax_input=softmax_input,
             target=target_one_hot,
             num_classes=6,
-            sample_class_counts=sample_class_counts,
             ignore_classes=[0, 1],
         )
 
