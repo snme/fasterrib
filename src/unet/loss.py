@@ -5,10 +5,19 @@ import torch.nn.functional as F
 from torch import nn
 
 
-def dice_score(input, target):
+def dice_score(input, target, pixel_mask=None):
     smooth = 1.0
+
     iflat = input.flatten(start_dim=1)
-    tflat = target.flatten(start_dim=1)
+    tflat = target.flatten(start_dim=1).clone()
+
+    if pixel_mask is not None:
+        pixel_mask = pixel_mask.flatten(start_dim=1)
+        iflat = iflat.clone()
+        tflat = tflat.clone()
+        iflat[pixel_mask] = 0
+        tflat[pixel_mask] = 0
+
     intersection = (iflat * tflat).sum(dim=1)
     return (2.0 * intersection + smooth) / (
         iflat.sum(dim=1) + tflat.sum(dim=1) + smooth
@@ -24,16 +33,16 @@ def multiclass_dice(
     if ignore_classes is None:
         ignore_classes = []
 
+    pixel_mask = target[:, 0] == 1  # mask out -1 labels
+
     dices = []
     for index in range(num_classes):
         if index in ignore_classes:
             continue
 
-        dices.append(dice_score(softmax_input[:, index], target[:, index]))
+        dices.append(dice_score(softmax_input[:, index], target[:, index], pixel_mask))
 
-    dice = torch.stack(dices, dim=1)
-    dice = dice.sum(dim=1) / len(dices)
-    return dice
+    return torch.stack(dices, dim=1).mean(dim=1)
 
 
 class MixedLoss(nn.Module):
@@ -41,12 +50,12 @@ class MixedLoss(nn.Module):
         super().__init__()
         self.n_classes = n_classes
 
-    def get_class_dice_score(
-        self, softmax_input, target_one_hot, class_, sample_class_counts
-    ):
-        mask = sample_class_counts[:, class_] > 0
-        dice = dice_score(softmax_input[:, class_], target_one_hot[:, class_])
-        dice = (dice * mask).sum() / mask.sum()  # can be nan
+    def get_class_dice_score(self, softmax_input, target_one_hot, class_):
+        pixel_mask = target_one_hot[:, 0]
+        dice = dice_score(
+            softmax_input[:, class_], target_one_hot[:, class_], pixel_mask
+        )
+        dice = dice.mean()
         return dice
 
     def get_all_dice_scores(self, input, target):
@@ -59,9 +68,12 @@ class MixedLoss(nn.Module):
         for i in range(self.n_classes):
             scores.append(
                 self.get_class_dice_score(
-                    softmax_input=softmax_input, target_one_hot=target_one_hot, class_=i
+                    softmax_input=softmax_input,
+                    target_one_hot=target_one_hot,
+                    class_=i,
                 )
             )
+
         return torch.stack(scores)
 
     def get_binary_dice_score(
@@ -71,9 +83,7 @@ class MixedLoss(nn.Module):
     ):
         # Sum the non-background probabilities to get a 0/1 probability
         softmax_input = softmax_input.sum(dim=1) - softmax_input[:, 1]
-        dice = dice_score(
-            softmax_input, (target != 1).type(torch.uint8)
-        )  # non-background dice score
+        dice = dice_score(softmax_input, (target != 1).type(torch.uint8))
         return dice
 
     def get_softmax_scores(self, input):
@@ -88,12 +98,12 @@ class MixedLoss(nn.Module):
         # Weighted cross-entropy loss
         weights = class_counts.clone()
         weights = (weights + 1) / (weights + 1).sum()
-        weights = 1 / weights
+        # weights = 1 / weights
         weights[0] = 0  # ignore the -1 class
         weights = weights / weights.sum()
 
-        ce = F.cross_entropy(input, target, weight=weights, reduction="none")
-        ce = ce.sum(dim=(1, 2)) / weights[target].sum(dim=(1, 2))
+        ce = F.cross_entropy(input, target, reduction="none", ignore_index=0)
+        ce = ce.mean(dim=(1, 2))
 
         # DICE loss
         # ignore class=1 since this corresponds to the background class.
@@ -112,17 +122,11 @@ class MixedLoss(nn.Module):
         )
 
         binary_dice = self.get_binary_dice_score(softmax_input, target)
-        binary_dice_loss = -torch.log(binary_dice)
 
-        dice_loss = torch.where(
-            multi_dice > 0,
-            -torch.log(multi_dice + 1e-8),
-            torch.tensor(
-                0, dtype=torch.float, device=input.get_device(), requires_grad=False
-            ),
-        )
+        dice_loss = -torch.log(multi_dice + 1e-12)
+        binary_dice_loss = -torch.log(binary_dice + 1e-12)
 
-        loss = ce + 10 * dice_loss + binary_dice_loss
+        loss = ce + binary_dice_loss + dice_loss
 
         dice_mean = torch.sum(multi_dice) / torch.sum(multi_dice > 0)
         return loss.mean(), dice_mean, ce.mean(), binary_dice.mean()

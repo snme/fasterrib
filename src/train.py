@@ -48,7 +48,7 @@ def train(data_loader, val_loader=None):
         devices=-1,
         val_check_interval=300,
         callbacks=[checkpoint_callback],
-        max_epochs=10,
+        max_epochs=100,
         logger=wandb_logger,
         detect_anomaly=True,
     )
@@ -59,6 +59,7 @@ def main():
     data = RFCDataset(
         data_dir="./data/ribfrac-challenge/training/prepared/pos",
     )
+    data = Subset(data, torch.randperm(len(data)))
 
     val_pos = RFCDataset(
         data_dir="./data/ribfrac-challenge/validation/prepared/pos",
@@ -67,13 +68,11 @@ def main():
         data_dir="./data/ribfrac-challenge/validation/prepared/neg",
     )
     val_pos_subset = Subset(val_pos, torch.randperm(len(val_pos))[:2000])
-    val_neg_subset = Subset(val_neg, torch.randperm(len(val_pos))[:2000])
+    val_neg_subset = Subset(val_neg, torch.randperm(len(val_neg))[:2000])
     val_data = ConcatDataset([val_pos_subset, val_neg_subset])
 
     train_loader = DataLoader(data, batch_size=batch_size, num_workers=24, shuffle=True)
-    val_loader = DataLoader(
-        val_data, batch_size=batch_size, num_workers=24, shuffle=True
-    )
+    val_loader = DataLoader(val_data, batch_size=batch_size, num_workers=24)
     print("Num training examples:", len(data))
     print("Num validation examples:", len(val_data))
     train(train_loader, val_loader)

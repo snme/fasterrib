@@ -7,10 +7,10 @@ class Block(nn.Module):
         self.block = nn.Sequential(
             nn.Conv2d(in_ch, out_ch, 3, padding="same"),
             nn.GroupNorm(1, out_ch),
-            nn.ReLU(),
+            nn.LeakyReLU(inplace=True),
             nn.Conv2d(out_ch, out_ch, 3, padding="same"),
             nn.GroupNorm(1, out_ch),
-            nn.ReLU(),
+            nn.LeakyReLU(inplace=True),
         )
 
     def forward(self, x):

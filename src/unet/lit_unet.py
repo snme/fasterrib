@@ -12,21 +12,29 @@ from src.unet.unet import UNet
 from torch.utils.data import DataLoader
 from torchmetrics import ConfusionMatrix, F1Score
 
+dirname = os.path.dirname(__file__)
+default_neg_dir = os.path.join(
+    dirname, "../../data/ribfrac-challenge/training/prepared/neg"
+)
+
 
 class LitUNet(pl.LightningModule):
-    def __init__(self, unet: UNet, class_counts: t.Optional[torch.Tensor] = None):
+    def __init__(
+        self,
+        unet: UNet,
+        class_counts: t.Optional[torch.Tensor] = None,
+        neg_dir=None,
+    ):
         super().__init__()
         self.unet = unet
         self.class_counts = class_counts
         self.f1 = F1Score(num_classes=6, average="none")
         self.confusion_matrix = ConfusionMatrix(num_classes=6)
-        dirname = os.path.dirname(__file__)
-        neg_dir = os.path.join(
-            dirname, "../../data/ribfrac-challenge/training/prepared/neg"
-        )
-        self.neg_dataset = RFCDataset(data_dir=neg_dir)
-        self.neg_loader = DataLoader(self.neg_dataset, shuffle=True, batch_size=4)
-        self.neg_iter = iter(self.neg_loader)
+
+        if neg_dir:
+            self.neg_dataset = RFCDataset(data_dir=neg_dir)
+            self.neg_loader = DataLoader(self.neg_dataset, shuffle=True, batch_size=4)
+            self.neg_iter = iter(self.neg_loader)
 
     def get_neg_samples(self):
         try:
@@ -70,7 +78,7 @@ class LitUNet(pl.LightningModule):
         loss = torch.stack([x[0] for x in outputs]).mean()
         dice = torch.stack([x[1] for x in outputs]).nanmean()
         ce = torch.stack([x[2] for x in outputs]).mean()
-        bin_dice = torch.stack([x[3] for x in outputs], dim=0).mean()
+        bin_dice = torch.stack([x[3] for x in outputs], dim=0).nanmean()
 
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_dice", dice, prog_bar=True)
@@ -160,5 +168,5 @@ class LitUNet(pl.LightningModule):
             plt.savefig("confmat.jpg")
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
