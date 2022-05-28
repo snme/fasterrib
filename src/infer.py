@@ -33,8 +33,6 @@ def infer_all(checkpoint, data_loader, out_dir):
 
     model = LitUNet.load_from_checkpoint(
         checkpoint_path=checkpoint,
-        unet=UNet(),
-        class_counts=None,
     )
     model.eval()
     model = model.to(device)

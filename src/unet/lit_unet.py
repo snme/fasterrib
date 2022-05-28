@@ -15,20 +15,26 @@ from torchmetrics import ConfusionMatrix, F1Score
 class LitUNet(pl.LightningModule):
     def __init__(
         self,
-        unet: UNet,
+        enc_chs=(1, 64, 128, 256, 512, 1024),
+        dec_chs=(1024, 512, 256, 128, 64),
+        num_classes=6,
         class_counts: t.Optional[torch.Tensor] = None,
         neg_dir=None,
+        learning_rate=1e-6,
     ):
         super().__init__()
-        self.unet = unet
-        self.class_counts = class_counts
-        self.f1 = F1Score(num_classes=6, average="none")
-        self.confusion_matrix = ConfusionMatrix(num_classes=6)
+        self.save_hyperparameters()
 
-        self.neg_dir = neg_dir
-        if neg_dir:
+        self.unet = UNet(enc_chs=self.hparams.enc_chs, dec_chs=self.hparams.dec_chs)
+        self.class_counts = self.hparams.class_counts
+        self.f1 = F1Score(num_classes=self.hparams.num_classes, average="none")
+        self.confusion_matrix = ConfusionMatrix(num_classes=self.hparams.num_classes)
+        self.neg_dir = self.hparams.neg_dir
+        self.learning_rate = self.hparams.learning_rate
+
+        if self.neg_dir:
             print("Using negative sampling")
-            self.neg_dataset = RFCDataset(data_dir=neg_dir)
+            self.neg_dataset = RFCDataset(data_dir=self.neg_dir)
             self.neg_loader = DataLoader(
                 self.neg_dataset,
                 shuffle=True,
@@ -109,15 +115,19 @@ class LitUNet(pl.LightningModule):
             dim=0, keepdim=True
         )
         bin_dice = torch.cat([x[1] for x in outputs]).nanmean()
-        f1 = self.f1.compute().unsqueeze(0)
+        f1 = self.f1.compute()
         confmat = self.confusion_matrix.compute()
         self.log("bin_dice", bin_dice, prog_bar=True)
-        self.log("f1", {str(i): c for (i, c) in enumerate(f1[0])}, prog_bar=False)
+
+        self.log("f1", {str(i): c for (i, c) in enumerate(f1)}, prog_bar=False)
+
         self.log(
-            "dice", {str(i): c for (i, c) in enumerate(dice_scores[0])}, prog_bar=False
+            "dice",
+            {str(i): c for (i, c) in enumerate(dice_scores.squeeze())},
+            prog_bar=False,
         )
 
-        self.save_f1_plot(f1.cpu().numpy()[:, 2:])
+        self.save_f1_plot(f1.unsqueeze(0).cpu().numpy()[:, 2:])
         self.save_dice_barplot(dice_scores.cpu().numpy()[:, 2:])
         self.save_confusion_matrix(confmat.cpu()[1:, 1:])
 
@@ -171,5 +181,5 @@ class LitUNet(pl.LightningModule):
             plt.savefig("confmat.jpg")
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         return optimizer

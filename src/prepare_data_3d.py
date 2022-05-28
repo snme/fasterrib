@@ -81,7 +81,7 @@ def prepare_data(img_dir, label_dir, info_path, out_dir, class_counts_path):
 
         n_slices = img.shape[0]
 
-        img = torch.as_tensor(label, dtype=torch.float32)
+        img = torch.as_tensor(img, dtype=torch.float32)
         label = torch.as_tensor(label, dtype=torch.long)
 
         # map all label ids to codes

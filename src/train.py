@@ -37,7 +37,7 @@ def train(data_loader, val_loader=None):
     class_counts = torch.load(class_counts_path)
     class_counts.requires_grad_(False)
     class_counts = class_counts.to(device)
-    model = LitUNet(unet=UNet(), class_counts=class_counts, neg_dir=default_neg_dir)
+    model = LitUNet(class_counts=class_counts, neg_dir=default_neg_dir)
     model.train()
     model = model.to(device)
 
