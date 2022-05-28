@@ -97,17 +97,22 @@ class LitUNet(pl.LightningModule):
     def test_step(self, batch, _):
         mixed_loss = MixedLoss()
         img = batch["image"]
-        label = batch["label"]
+        target = batch["label"]
         out = self.unet(img)
-        dice_scores = mixed_loss.get_all_dice_scores(out, label)
+        dice_scores = mixed_loss.get_all_dice_scores(out, target)
+
+        target_one_hot = torch.nn.functional.one_hot(target, num_classes=6)
+        target_one_hot = target_one_hot.type(torch.int8).permute(0, 3, 1, 2)
 
         softmax_out = mixed_loss.get_softmax_scores(out)
-        bin_dice = mixed_loss.get_binary_dice_score(softmax_out, label)
+        bin_dice = mixed_loss.get_binary_dice_score(
+            softmax_out, target, target_one_hot=target_one_hot
+        )
 
         y_pred = torch.argmax(out, dim=1)
-        assert y_pred.size() == label.size()
-        self.confusion_matrix(y_pred.flatten(), label.flatten())
-        self.f1(y_pred.flatten(), label.flatten())
+        assert y_pred.size() == target.size()
+        self.confusion_matrix(y_pred.flatten(), target.flatten())
+        self.f1(y_pred.flatten(), target.flatten())
         return dice_scores, bin_dice
 
     def test_epoch_end(self, outputs):

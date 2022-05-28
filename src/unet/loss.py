@@ -80,18 +80,15 @@ class MixedLoss(nn.Module):
 
         return torch.stack(scores)
 
-    def get_binary_dice_score(
-        self,
-        softmax_input,
-        target,
-    ):
+    def get_binary_dice_score(self, softmax_input, target, target_one_hot):
+        pixel_mask = target_one_hot[:, 0] == 1
+
         # Sum the non-background probabilities to get a 0/1 probability
         softmax_input = (
             softmax_input.sum(dim=1) - softmax_input[:, 1] - softmax_input[:, 0]
         )
         dice = dice_score(
-            softmax_input,
-            (target != 1).type(torch.uint8),
+            softmax_input, (target != 1).type(torch.uint8), pixel_mask=pixel_mask
         )
         return dice
 
@@ -129,7 +126,9 @@ class MixedLoss(nn.Module):
             ignore_classes=[0, 1],
         )
 
-        binary_dice = self.get_binary_dice_score(softmax_input, target)
+        binary_dice = self.get_binary_dice_score(
+            softmax_input, target, target_one_hot=target_one_hot
+        )
 
         multi_dice_loss = -torch.log(multi_dice)
         binary_dice_loss = -torch.log(binary_dice)
