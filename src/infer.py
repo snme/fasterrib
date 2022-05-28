@@ -13,6 +13,7 @@ from src.unet.unet import UNet
 
 dirname = os.path.dirname(__file__)
 device = "cuda" if torch.cuda.is_available() else "cpu"
+# device = "cpu"
 print(f"Using {device} device")
 
 parser = argparse.ArgumentParser(
@@ -54,7 +55,7 @@ def infer_all(checkpoint, data_loader, out_dir):
             bin_probs[i] = bprobs_i
 
             max_probs, max_idx = torch.max(probs, dim=1, keepdim=True)
-            max_idx[max_probs < 0.6] = 1
+            max_idx[max_probs < 0.7] = 1
             preds[i] = max_idx[0, 0]
 
         preds = preds.permute(1, 2, 0)  # (SLICES, H, W) -> (H, W, SLICES)

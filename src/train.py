@@ -25,29 +25,48 @@ train_dir = os.path.join(dirname, "../data/ribfrac-challenge/training/")
 class_counts_path = os.path.join(train_dir, "class_counts.pt")
 batch_size = 8
 
+dirname = os.path.dirname(__file__)
+default_neg_dir = os.path.join(
+    dirname, "../data/ribfrac-challenge/training/prepared/neg"
+)
+
+torch.cuda.empty_cache()
+
 
 def train(data_loader, val_loader=None):
     class_counts = torch.load(class_counts_path)
     class_counts.requires_grad_(False)
     class_counts = class_counts.to(device)
-    model = LitUNet(unet=UNet(), class_counts=class_counts)
+    model = LitUNet(unet=UNet(), class_counts=class_counts, neg_dir=default_neg_dir)
+    model.train()
     model = model.to(device)
 
     wandb_logger = WandbLogger(project="ribfrac")
 
-    # train model
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=os.path.join(
-            dirname, f"../checkpoints-{datetime.now().strftime('%m%d-%H%M')}"
-        ),
+    checkpoint_dir = os.path.join(
+        dirname, f"../checkpoints-{datetime.now().strftime('%m%d-%H%M')}"
+    )
+
+    loss_callback = ModelCheckpoint(
+        dirpath=checkpoint_dir,
         save_top_k=2,
         monitor="val_loss",
+        filename="{epoch}-{step}-val-loss-{val_loss:.2f}",
     )
+
+    bin_dice_callback = ModelCheckpoint(
+        dirpath=checkpoint_dir,
+        save_top_k=2,
+        monitor="val_bin_dice",
+        filename="{epoch}-{step}-val-bin-dice-{val_bin_dice:.2f}",
+        mode="max",
+    )
+
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=-1,
         val_check_interval=300,
-        callbacks=[checkpoint_callback],
+        callbacks=[loss_callback, bin_dice_callback],
         max_epochs=100,
         logger=wandb_logger,
         detect_anomaly=True,
@@ -71,8 +90,16 @@ def main():
     val_neg_subset = Subset(val_neg, torch.randperm(len(val_neg))[:2000])
     val_data = ConcatDataset([val_pos_subset, val_neg_subset])
 
-    train_loader = DataLoader(data, batch_size=batch_size, num_workers=24, shuffle=True)
-    val_loader = DataLoader(val_data, batch_size=batch_size, num_workers=24)
+    train_loader = DataLoader(
+        data,
+        batch_size=batch_size,
+        num_workers=24,
+        shuffle=True,
+        persistent_workers=True,
+    )
+    val_loader = DataLoader(
+        val_data, batch_size=batch_size, num_workers=24, persistent_workers=True
+    )
     print("Num training examples:", len(data))
     print("Num validation examples:", len(val_data))
     train(train_loader, val_loader)

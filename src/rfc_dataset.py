@@ -20,7 +20,7 @@ class RFCDataset(Dataset):
             data_dir (string): Path to the directory of preprepared data files.
         """
         self.data_dir = data_dir
-        paths = [path for path in Path(data_dir).glob("slice_pair_*.pt.gz")]
+        paths = [path for path in Path(data_dir).glob("*.pt.gz")]
         self.paths = paths
         self.transforms = [Window(-200, 1000), MinMaxNorm(-200, 1000)]
 

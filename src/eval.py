@@ -17,24 +17,23 @@ parser = argparse.ArgumentParser(
     description="Evaluates the ribfrac model on the full RFC validation set"
 )
 
-batch_size = 8
+batch_size = 1
+torch.cuda.empty_cache()
 
 
 def eval(data_loader):
     model = LitUNet.load_from_checkpoint(
-        "./checkpoints-0525-1018/epoch=6-step=35598.ckpt",
+        "checkpoints-0528-0951/epoch=0-step=1200.ckpt",
         unet=UNet(),
         class_counts=None,
+        neg_dir=None,
     )
+    model.to(device)
     model.eval()
-    model = model.to(device)
 
     # test model
     trainer = pl.Trainer(
-        accelerator="gpu",
-        devices=-1,
-        max_epochs=1,
-        detect_anomaly=True,
+        accelerator="auto", devices=1, max_epochs=1, detect_anomaly=True
     )
     trainer.test(model=model, dataloaders=data_loader)
 
@@ -48,11 +47,15 @@ def main():
     )
     val_data = ConcatDataset([val_pos, val_neg])
     val_data = Subset(val_data, torch.arange(100))
-    val_loader = DataLoader(val_data, batch_size=batch_size, num_workers=24)
     print("Num validation examples:", len(val_data))
+    val_loader = DataLoader(
+        val_data, batch_size=8, persistent_workers=True, num_workers=12
+    )
+
     eval(val_loader)
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    main()
+    with torch.no_grad():
+        main()

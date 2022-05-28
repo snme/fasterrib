@@ -1,4 +1,3 @@
-import os
 import typing as t
 
 import matplotlib.pyplot as plt
@@ -11,11 +10,6 @@ from src.unet.loss import MixedLoss
 from src.unet.unet import UNet
 from torch.utils.data import DataLoader
 from torchmetrics import ConfusionMatrix, F1Score
-
-dirname = os.path.dirname(__file__)
-default_neg_dir = os.path.join(
-    dirname, "../../data/ribfrac-challenge/training/prepared/neg"
-)
 
 
 class LitUNet(pl.LightningModule):
@@ -31,9 +25,17 @@ class LitUNet(pl.LightningModule):
         self.f1 = F1Score(num_classes=6, average="none")
         self.confusion_matrix = ConfusionMatrix(num_classes=6)
 
+        self.neg_dir = neg_dir
         if neg_dir:
+            print("Using negative sampling")
             self.neg_dataset = RFCDataset(data_dir=neg_dir)
-            self.neg_loader = DataLoader(self.neg_dataset, shuffle=True, batch_size=4)
+            self.neg_loader = DataLoader(
+                self.neg_dataset,
+                shuffle=True,
+                batch_size=4,
+                persistent_workers=True,
+                num_workers=8,
+            )
             self.neg_iter = iter(self.neg_loader)
 
     def get_neg_samples(self):
@@ -49,9 +51,10 @@ class LitUNet(pl.LightningModule):
         label = batch["label"]
 
         # Negative sampling
-        neg_batch = self.get_neg_samples()
-        img = torch.cat([img, neg_batch["image"].to(img.get_device())], dim=0)
-        label = torch.cat([label, neg_batch["label"].to(img.get_device())], dim=0)
+        if self.neg_dir is not None:
+            neg_batch = self.get_neg_samples()
+            img = torch.cat([img, neg_batch["image"].to(img.get_device())], dim=0)
+            label = torch.cat([label, neg_batch["label"].to(img.get_device())], dim=0)
 
         loss_fn = MixedLoss()
 
@@ -168,5 +171,5 @@ class LitUNet(pl.LightningModule):
             plt.savefig("confmat.jpg")
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
         return optimizer

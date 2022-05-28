@@ -11,9 +11,9 @@ class Encoder(nn.Module):
         self.pool = nn.MaxPool2d(2)
 
     def forward(self, x):
-        ftrs = []
+        out = []
         for block in self.enc_blocks:
             x = block(x)
-            ftrs.append(x)
+            out.append(x)
             x = self.pool(x)
-        return ftrs
+        return out
