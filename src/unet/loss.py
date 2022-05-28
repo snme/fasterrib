@@ -88,7 +88,7 @@ class MixedLoss(nn.Module):
             softmax_input.sum(dim=1) - softmax_input[:, 1] - softmax_input[:, 0]
         )
         dice = dice_score(
-            softmax_input, (target != 1).type(torch.uint8), pixel_mask=pixel_mask
+            softmax_input, (target > 1).type(torch.uint8), pixel_mask=pixel_mask
         )
         return dice
 
