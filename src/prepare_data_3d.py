@@ -93,7 +93,7 @@ def prepare_data(img_dir, label_dir, info_path, out_dir, class_counts_path):
 
         # Sum class counts
         for c in range(n_classes):
-            class_counts[c] += label[label == c].sum()
+            class_counts[c] += (label == c).sum()
 
         assert list(label.size()) == [n_slices, 512, 512]
 

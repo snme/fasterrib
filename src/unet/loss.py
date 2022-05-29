@@ -1,4 +1,5 @@
 import typing as t
+from tkinter import E
 
 import torch
 import torch.nn.functional as F
@@ -108,15 +109,21 @@ class MixedLoss(nn.Module):
             counts[i] += (target == i).sum()
         return counts
 
-    def forward(self, input, target, class_counts: torch.Tensor):
+    def forward(self, input, target, class_counts: t.Optional[torch.Tensor] = None):
         softmax_input = self.get_softmax_scores(input)
 
         # reweighting
-        # weights = class_counts + 1
-        # weights = 1 / weights
-        # weights = weights / weights.sum()
+        if class_counts:
+            weights = class_counts + 1
+            weights = 1 / weights
+            weights[0] = 0
+            weights = weights / weights.sum()
+        else:
+            weights = None
 
-        ce = F.cross_entropy(input, target, reduction="none", ignore_index=0)
+        ce = F.cross_entropy(
+            input, target, reduction="none", ignore_index=0, weight=weights
+        )
 
         # focal_loss = (torch.pow(1 - torch.exp(-ce), 2) * ce).sum(dim=(1, 2))
         ce_loss = ce.mean(dim=(1, 2))
