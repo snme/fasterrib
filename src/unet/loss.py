@@ -94,6 +94,7 @@ class MixedLoss(nn.Module):
 
     def get_softmax_scores(self, input):
         softmax_input = input.clone()
+        softmax_input[:, 0] = float("-inf")
         softmax_input = F.softmax(softmax_input, dim=1)
         return softmax_input
 
@@ -110,7 +111,13 @@ class MixedLoss(nn.Module):
     def forward(self, input, target, class_counts: torch.Tensor):
         softmax_input = self.get_softmax_scores(input)
 
+        # reweighting
+        # weights = class_counts + 1
+        # weights = 1 / weights
+        # weights = weights / weights.sum()
+
         ce = F.cross_entropy(input, target, reduction="none", ignore_index=0)
+
         # focal_loss = (torch.pow(1 - torch.exp(-ce), 2) * ce).sum(dim=(1, 2))
         ce_loss = ce.mean(dim=(1, 2))
 
@@ -133,11 +140,6 @@ class MixedLoss(nn.Module):
         multi_dice_loss = -torch.log(multi_dice)
         binary_dice_loss = -torch.log(binary_dice)
 
-        loss = (
-            ce_loss
-            + binary_dice_loss
-            + multi_dice_loss
-            - torch.log(1 - softmax_input[:, 0]).mean(dim=(1, 2))
-        )
+        loss = ce_loss + binary_dice_loss + multi_dice_loss
 
         return loss.mean(), multi_dice.mean(), ce_loss.mean(), binary_dice.mean()

@@ -2,7 +2,7 @@ import argparse
 import os
 
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import ConcatDataset, DataLoader
 from tqdm import tqdm
 
 from src.rfc_dataset import RFCDataset
@@ -17,21 +17,24 @@ out_path = os.path.join(dirname, "../data/ribfrac-challenge/training/class_count
 
 n_classes = 6
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cpu"  # "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def main():
-    data = RFCDataset(
-        data_dir="./data/ribfrac-challenge/training/prepared",
+    data_pos = RFCDataset(
+        data_dir="./data/ribfrac-challenge/training/prepared/pos",
     )
-    data_loader = DataLoader(data, num_workers=24, batch_size=32, shuffle=True)
+    data_neg = RFCDataset(
+        data_dir="./data/ribfrac-challenge/training/prepared/neg",
+    )
+    data = ConcatDataset([data_pos, data_neg])
+    data_loader = DataLoader(data, num_workers=24, batch_size=16)
 
     class_counts = torch.zeros((n_classes,), dtype=torch.long, device=device)
 
     for x in tqdm(data_loader):
         label = x["label"]
         label.to(device)
-        label = torch.argmax(label, dim=1)  # one-hot -> indices
 
         assert label.min() >= 0
         assert label.max() <= 5

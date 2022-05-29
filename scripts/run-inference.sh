@@ -9,4 +9,4 @@ cd $DIR/..
 python -m src.infer \
     --in-dir ./data/ribfrac-challenge/training/images/all \
     --out-dir ./inference-results \
-    --checkpoint checkpoints-0527-2317/epoch=2-step=9324.ckpt
+    --checkpoint checkpoints-0528-1710/epoch=0-step=5400-val-bin-dice-val_bin_dice=0.63.ckpt

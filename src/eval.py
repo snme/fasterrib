@@ -23,7 +23,7 @@ torch.cuda.empty_cache()
 
 def eval(data_loader):
     model = LitUNet.load_from_checkpoint(
-        "checkpoints-0528-1112/epoch=1-step=9433-val-loss-val_loss=725.60.ckpt",
+        "checkpoints-0528-1710/epoch=0-step=5400-val-loss-val_loss=1.60.ckpt",
     )
     model.to(device)
     model.eval()
@@ -43,7 +43,7 @@ def main():
         data_dir="./data/ribfrac-challenge/validation/prepared/neg",
     )
     val_data = ConcatDataset([val_pos, val_neg])
-    val_data = Subset(val_data, torch.arange(300))
+    val_data = Subset(val_data, torch.randperm(len(val_data)))
     print("Num validation examples:", len(val_data))
     val_loader = DataLoader(
         val_data, batch_size=8, persistent_workers=True, num_workers=12

@@ -42,29 +42,37 @@ def infer_all(checkpoint, data_loader, out_dir):
     for (img, basename) in tqdm(data_loader):
 
         img = img.squeeze()  # (SLICES, H, W)
+        S, H, W = list(img.shape)
+        probs = torch.zeros((S, 6, H, W), dtype=torch.float32)
         bin_probs = torch.zeros_like(img)
         preds = torch.zeros_like(img)
 
         for i, img_slice in enumerate(img):
             img_slice = img_slice.to(device).unsqueeze(0).unsqueeze(0)  # (1, 1, H, W)
             logits = model(img_slice)
-            probs = mixed_loss.get_softmax_scores(logits)
-            bprobs_i = torch.sum(probs, dim=1) - probs[:, 1]
+
+            probs_i = mixed_loss.get_softmax_scores(logits)
+            probs[i] = probs_i
+
+            bprobs_i = torch.sum(probs_i, dim=1) - probs_i[:, 1]
             bin_probs[i] = bprobs_i
 
             max_probs, max_idx = torch.max(probs, dim=1, keepdim=True)
-            max_idx[max_probs < 0.7] = 1
-            preds[i] = max_idx[0, 0]
+            preds[i] = torch.argmax(probs_i, dim=1)
 
         preds = preds.permute(1, 2, 0)  # (SLICES, H, W) -> (H, W, SLICES)
         out_path = os.path.join(out_dir, f"{basename[0]}-prediction.npy")
         with open(out_path, "wb") as f:
             np.save(f, preds.numpy())
 
-        bin_probs = bin_probs.permute(1, 2, 0)  # (SLICES, H, W) -> (H, W, SLICES)
+            bin_probs = bin_probs.permute(1, 2, 0)  # (SLICES, H, W) -> (H, W, SLICES)
         out_path = os.path.join(out_dir, f"{basename[0]}-bin-probs.npy")
         with open(out_path, "wb") as f:
             np.save(f, bin_probs.numpy())
+
+        out_path = os.path.join(out_dir, f"{basename[0]}-probs.npy")
+        with open(out_path, "wb") as f:
+            np.save(f, probs.numpy())
 
 
 def main(args):
