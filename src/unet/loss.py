@@ -31,6 +31,7 @@ def multiclass_dice(
     target_one_hot,
     num_classes: int,
     ignore_classes: t.Optional[t.List[int]] = None,
+    weights=None,
 ):
     if ignore_classes is None:
         ignore_classes = []
@@ -38,15 +39,27 @@ def multiclass_dice(
     pixel_mask = target_one_hot[:, 0] == 1
 
     dices = []
+    ws = []
     for index in range(num_classes):
         if index in ignore_classes:
             continue
 
+        if weights is not None:
+            w = weights[index]
+        else:
+            w = 1
+
+        ws.append(w)
+
         dices.append(
-            dice_score(
+            w
+            * dice_score(
                 softmax_input[:, index], target_one_hot[:, index], pixel_mask=pixel_mask
             )
         )
+
+    if weights is not None:
+        return torch.stack(dices, dim=1).sum(dim=1) / torch.stack(ws).sum()
 
     return torch.stack(dices, dim=1).mean(dim=1)
 
@@ -89,7 +102,7 @@ class MixedLoss(nn.Module):
             softmax_input.sum(dim=1) - softmax_input[:, 1] - softmax_input[:, 0]
         )
         dice = dice_score(
-            softmax_input, (target > 1).type(torch.uint8), pixel_mask=pixel_mask
+            softmax_input, (target > 1).type(torch.int8), pixel_mask=pixel_mask
         )
         return dice
 
@@ -113,20 +126,24 @@ class MixedLoss(nn.Module):
         softmax_input = self.get_softmax_scores(input)
 
         # reweighting
-        if class_counts:
+        if class_counts is not None:
             weights = class_counts + 1
-            weights = 1 / weights
+            weights = 1 / torch.pow(weights, 1.0 / 3.0)
             weights[0] = 0
             weights = weights / weights.sum()
         else:
             weights = None
 
-        ce = F.cross_entropy(
-            input, target, reduction="none", ignore_index=0, weight=weights
-        )
-
         # focal_loss = (torch.pow(1 - torch.exp(-ce), 2) * ce).sum(dim=(1, 2))
-        ce_loss = ce.mean(dim=(1, 2))
+
+        if class_counts is not None:
+            ce = F.cross_entropy(
+                input, target, reduction="mean", ignore_index=0, weight=weights
+            )
+            ce_loss = ce
+        else:
+            ce = F.cross_entropy(input, target, reduction="none", ignore_index=0)
+            ce_loss = ce.mean(dim=(1, 2))
 
         # DICE loss
         # ignore class=1 since this corresponds to the background class.
@@ -138,6 +155,7 @@ class MixedLoss(nn.Module):
             target_one_hot=target_one_hot,
             num_classes=6,
             ignore_classes=[0, 1],
+            weights=weights,
         )
 
         binary_dice = self.get_binary_dice_score(

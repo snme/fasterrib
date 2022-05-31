@@ -44,21 +44,21 @@ def train(data_loader, val_loader=None):
     wandb_logger = WandbLogger(project="ribfrac")
 
     checkpoint_dir = os.path.join(
-        dirname, f"../checkpoints-{datetime.now().strftime('%m%d-%H%M')}"
+        dirname, f"../checkpoints-{datetime.now().strftime('%m%d-%H%M')}-ce-dice-weight"
     )
 
     loss_callback = ModelCheckpoint(
         dirpath=checkpoint_dir,
         save_top_k=2,
         monitor="val_loss",
-        filename="{epoch}-{step}-val-loss-{val_loss:.2f}",
+        filename="{epoch}-{step}-{val_loss:.2f}",
     )
 
     bin_dice_callback = ModelCheckpoint(
         dirpath=checkpoint_dir,
         save_top_k=2,
         monitor="val_bin_dice",
-        filename="{epoch}-{step}-val-bin-dice-{val_bin_dice:.2f}",
+        filename="{epoch}-{step}-{val_bin_dice:.2f}",
         mode="max",
     )
 

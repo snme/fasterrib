@@ -3,7 +3,9 @@ import os
 
 import pytorch_lightning as pl
 import torch
+from sklearn.metrics import auc, roc_curve
 from torch.utils.data import ConcatDataset, DataLoader, Subset
+from torchmetrics import ROC
 
 from src.rfc_dataset import RFCDataset
 from src.unet.lit_unet import LitUNet
@@ -23,7 +25,7 @@ torch.cuda.empty_cache()
 
 def eval(data_loader):
     model = LitUNet.load_from_checkpoint(
-        "checkpoints-0528-1710/epoch=0-step=5400-val-loss-val_loss=1.60.ckpt",
+        "checkpoints-0530-1223/epoch=4-step=27532-val_loss=0.00.ckpt",
     )
     model.to(device)
     model.eval()
@@ -46,7 +48,7 @@ def main():
     val_data = Subset(val_data, torch.randperm(len(val_data)))
     print("Num validation examples:", len(val_data))
     val_loader = DataLoader(
-        val_data, batch_size=8, persistent_workers=True, num_workers=12
+        val_data, batch_size=4, persistent_workers=True, num_workers=24
     )
 
     eval(val_loader)
