@@ -155,7 +155,6 @@ class MixedLoss(nn.Module):
             target_one_hot=target_one_hot,
             num_classes=6,
             ignore_classes=[0, 1],
-            weights=weights,
         )
 
         binary_dice = self.get_binary_dice_score(
