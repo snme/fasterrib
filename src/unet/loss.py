@@ -10,7 +10,7 @@ def dice_score(input, target, pixel_mask=None):
     smooth = 1.0
 
     iflat = input.flatten(start_dim=1)
-    tflat = target.flatten(start_dim=1).clone()
+    tflat = target.flatten(start_dim=1)
 
     if pixel_mask is not None:
         assert pixel_mask.shape == input.shape
@@ -128,7 +128,7 @@ class MixedLoss(nn.Module):
         # reweighting
         if class_counts is not None:
             weights = class_counts + 1
-            weights = 1 / torch.pow(weights, 1.0 / 3.0)
+            weights = 1 / torch.sqrt(weights)
             weights[0] = 0
             weights = weights / weights.sum()
         else:
@@ -165,6 +165,6 @@ class MixedLoss(nn.Module):
         multi_dice_loss = -torch.log(multi_dice)
         binary_dice_loss = -torch.log(binary_dice)
 
-        loss = ce_loss + binary_dice_loss + multi_dice_loss
+        loss = 10 * ce_loss + binary_dice_loss + multi_dice_loss
 
         return loss.mean(), multi_dice.mean(), ce_loss.mean(), binary_dice.mean()
