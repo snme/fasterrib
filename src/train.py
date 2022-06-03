@@ -35,8 +35,7 @@ torch.cuda.empty_cache()
 
 
 def train(data_loader, val_loader=None):
-    class_counts = torch.load(class_counts_path).numpy().tolist()
-    model = LitUNet(params=HParams(class_counts=class_counts))
+    model = LitUNet(params=HParams())
     model.train()
     model = model.to(device)
 
