@@ -3,6 +3,7 @@ from tkinter import E
 
 import torch
 import torch.nn.functional as F
+from src.unet.hparams import ELossFunction, HParams
 from torch import nn
 
 
@@ -65,9 +66,9 @@ def multiclass_dice(
 
 
 class MixedLoss(nn.Module):
-    def __init__(self, n_classes=6):
+    def __init__(self, params: HParams):
         super().__init__()
-        self.n_classes = n_classes
+        self.params: HParams = params
 
     def get_class_dice_score(self, softmax_input, target_one_hot, class_):
         pixel_mask = target_one_hot[:, 0] == 1
@@ -83,7 +84,7 @@ class MixedLoss(nn.Module):
         softmax_input = self.get_softmax_scores(input)
 
         scores = []
-        for i in range(self.n_classes):
+        for i in range(self.params.n_classes):
             scores.append(
                 self.get_class_dice_score(
                     softmax_input=softmax_input,
@@ -128,7 +129,7 @@ class MixedLoss(nn.Module):
         # reweighting
         if class_counts is not None:
             weights = class_counts + 1
-            weights = 1 / torch.sqrt(weights)
+            weights = 1 / torch.pow(weights, self.params.reweight_factor)
             weights[0] = 0
             weights = weights / weights.sum()
         else:
@@ -164,6 +165,18 @@ class MixedLoss(nn.Module):
         multi_dice_loss = -torch.log(multi_dice)
         binary_dice_loss = -torch.log(binary_dice)
 
-        loss = 10 * ce_loss + binary_dice_loss + multi_dice_loss
+        if self.params.loss_fn == ELossFunction.CE_BD_MD:
+            loss = (
+                self.params.ce_weight * ce_loss
+                + self.params.bd_weight * binary_dice_loss
+                + self.params.md_weight * multi_dice_loss
+            )
+        elif self.params.loss_fn == ELossFunction.CE_MD:
+            loss = (
+                self.params.ce_weight * ce_loss
+                + self.params.md_weight * multi_dice_loss
+            )
+        else:
+            raise NotImplementedError()
 
         return loss.mean(), multi_dice.mean(), ce_loss.mean(), binary_dice.mean()

@@ -9,28 +9,31 @@ import torch
 from matplotlib.colors import LogNorm
 from sklearn import metrics
 from src.rfc_dataset import RFCDataset
+from src.unet.hparams import HParams
 from src.unet.loss import MixedLoss
 from src.unet.unet import UNet
+from torch import nn
 from torch.utils.data import DataLoader
 from torchmetrics import AUROC, ROC, ConfusionMatrix, F1Score
 
 
 class LitUNet(pl.LightningModule):
-    def __init__(
-        self,
-        enc_chs=(1, 64, 128, 256, 512, 1024),
-        dec_chs=(1024, 512, 256, 128, 64),
-        num_classes=6,
-        class_counts: t.Optional[torch.Tensor] = None,
-        neg_dir=None,
-        learning_rate=1e-6,
-        eval_roc=False,
-    ):
+    def __init__(self, params: HParams):
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters(params.dict())
 
-        self.unet = UNet(enc_chs=self.hparams.enc_chs, dec_chs=self.hparams.dec_chs)
-        self.class_counts = self.hparams.class_counts
+        self.params = HParams.parse_obj(self.hparams)
+
+        self.unet = UNet(enc_chs=self.params.enc_chs, dec_chs=self.hparams.dec_chs)
+
+        if self.params.class_counts:
+            self.class_counts = nn.Parameter(
+                torch.tensor(self.params.class_counts, device=self.device),
+                requires_grad=False,
+            )
+        else:
+            self.class_counts = None
+
         self.neg_dir = self.hparams.neg_dir
         self.learning_rate = self.hparams.learning_rate
         self.num_classes = self.hparams.num_classes
@@ -80,7 +83,7 @@ class LitUNet(pl.LightningModule):
             img = torch.cat([img, neg_batch["image"].to(img.get_device())], dim=0)
             label = torch.cat([label, neg_batch["label"].to(img.get_device())], dim=0)
 
-        loss_fn = MixedLoss()
+        loss_fn = MixedLoss(params=self.params)
 
         out = self.unet(img)
         loss, dice, ce, bin_dice = loss_fn(out, label, class_counts=self.class_counts)
@@ -94,7 +97,7 @@ class LitUNet(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         # this is the test loop
-        mixed_loss = MixedLoss()
+        mixed_loss = MixedLoss(params=self.params)
         img = batch["image"]
         target = batch["label"]
         out = self.unet(img)
@@ -129,7 +132,7 @@ class LitUNet(pl.LightningModule):
         self.log("macro_f1", macro_f1, prog_bar=False)
 
     def test_step(self, batch, _):
-        mixed_loss = MixedLoss()
+        mixed_loss = MixedLoss(params=self.params)
         img = batch["image"]
         target = batch["label"]
         out = self.unet(img)

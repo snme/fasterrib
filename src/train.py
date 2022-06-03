@@ -9,6 +9,7 @@ from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import ConcatDataset, DataLoader, Subset
 
 from src.rfc_dataset import RFCDataset
+from src.unet.hparams import HParams
 from src.unet.lit_unet import LitUNet
 from src.unet.unet import UNet
 
@@ -34,10 +35,8 @@ torch.cuda.empty_cache()
 
 
 def train(data_loader, val_loader=None):
-    class_counts = torch.load(class_counts_path)
-    class_counts.requires_grad_(False)
-    class_counts = class_counts.to(device)
-    model = LitUNet(class_counts=class_counts, neg_dir=default_neg_dir)
+    class_counts = torch.load(class_counts_path).numpy().tolist()
+    model = LitUNet(params=HParams(class_counts=class_counts))
     model.train()
     model = model.to(device)
 
