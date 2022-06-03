@@ -123,6 +123,28 @@ class MixedLoss(nn.Module):
             counts[i] += (target == i).sum()
         return counts
 
+    def get_ce_loss(self, input, target, weights=None):
+        if weights is not None:
+            return F.cross_entropy(
+                input, target, reduction="mean", ignore_index=0, weight=weights
+            )
+
+        return F.cross_entropy(input, target, reduction="none", ignore_index=0).mean(
+            dim=(1, 2)
+        )
+
+    def get_focal_loss(self, input, target, weights=None):
+        ce = F.cross_entropy(
+            input, target, reduction="none", ignore_index=0, weight=weights
+        )
+
+        if weights is None:
+            focal = torch.pow(1 - torch.exp(-ce), self.params.focal_gamma) * ce
+            return focal.mean(dim=(1, 2))
+
+        focal = torch.pow(1 - torch.exp(-ce), self.params.focal_gamma) * ce
+        return focal.sum(dim=(1, 2)) / weights[target].sum(dim=(1, 2))
+
     def forward(self, input, target, class_counts: t.Optional[torch.Tensor] = None):
         softmax_input = self.get_softmax_scores(input)
 
@@ -137,14 +159,7 @@ class MixedLoss(nn.Module):
 
         # focal_loss = (torch.pow(1 - torch.exp(-ce), 2) * ce).sum(dim=(1, 2))
 
-        if class_counts is not None:
-            ce = F.cross_entropy(
-                input, target, reduction="mean", ignore_index=0, weight=weights
-            )
-            ce_loss = ce
-        else:
-            ce = F.cross_entropy(input, target, reduction="none", ignore_index=0)
-            ce_loss = ce.mean(dim=(1, 2))
+        ce_loss = self.get_ce_loss(input, target, weights)
 
         # DICE loss
         # ignore class=1 since this corresponds to the background class.
@@ -174,6 +189,18 @@ class MixedLoss(nn.Module):
         elif self.params.loss_fn == ELossFunction.CE_MD:
             loss = (
                 self.params.ce_weight * ce_loss
+                + self.params.md_weight * multi_dice_loss
+            )
+        elif self.params.loss_fn == ELossFunction.CE:
+            loss = self.params.ce_weight * ce_loss
+        elif self.params.loss_fn == ELossFunction.FOCAL:
+            focal_loss = self.get_focal_loss(input, target, weights)
+            loss = self.params.focal_weight * focal_loss
+        elif self.params.loss_fn == ELossFunction.FOCAL_BD_MD:
+            focal_loss = self.get_focal_loss(input, target, weights)
+            loss = (
+                self.params.focal_weight * focal_loss
+                + self.params.bd_weight * binary_dice_loss
                 + self.params.md_weight * multi_dice_loss
             )
         else:
