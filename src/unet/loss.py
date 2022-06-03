@@ -1,5 +1,4 @@
 import typing as t
-from tkinter import E
 
 import torch
 import torch.nn.functional as F
