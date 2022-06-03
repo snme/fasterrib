@@ -77,7 +77,7 @@ def infer_all(checkpoint, data_loader, out_dir):
 
 def main(args):
     data = InferenceDataset(data_dir=args.in_dir)
-    data_loader = DataLoader(data, batch_size=1, num_workers=24, shuffle=False)
+    data_loader = DataLoader(data, batch_size=1, num_workers=12, shuffle=False)
 
     with torch.no_grad():
         infer_all(

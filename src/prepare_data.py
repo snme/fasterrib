@@ -2,13 +2,11 @@ import argparse
 import csv
 import gzip
 import os
-from multiprocessing import Pool
 from pathlib import Path
 
 import nibabel as nib
 import numpy as np
 import torch
-from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 
 parser = argparse.ArgumentParser(
@@ -29,13 +27,10 @@ val_labels_dir = os.path.join(val_dir, "ribfrac-val-labels")
 val_info_path = os.path.join(val_dir, "ribfrac-val-info.csv")
 train_out_dir = os.path.join(train_dir, "prepared/")
 val_out_dir = os.path.join(val_dir, "prepared/")
-train_class_counts_path = os.path.join(train_dir, "class_counts.pt")
-val_class_counts_path = os.path.join(val_dir, "class_counts.pt")
-
 n_classes = 6
 
 
-def prepare_data(img_dir, label_dir, info_path, out_dir, class_counts_path):
+def prepare_data(img_dir, label_dir, info_path, out_dir):
     pos_dir = os.path.join(out_dir, "pos")
     neg_dir = os.path.join(out_dir, "neg")
     os.makedirs(pos_dir, exist_ok=True)
@@ -97,7 +92,7 @@ def prepare_img(args):
     assert list(label.size()) == [n_slices, 512, 512]
 
     for s in range(n_slices):
-        if torch.any(label[s] != 1).item():
+        if torch.any(label[s] > 1).item():
             out_path = os.path.join(pos_dir, f"{public_id}_{s}.pt.gz")
         else:
             out_path = os.path.join(neg_dir, f"{public_id}_{s}.pt.gz")
@@ -111,7 +106,6 @@ def prepare_train():
         label_dir=train_labels_dir,
         info_path=train_info_path,
         out_dir=train_out_dir,
-        class_counts_path=train_class_counts_path,
     )
 
 
@@ -122,7 +116,6 @@ def prepare_val():
         label_dir=val_labels_dir,
         info_path=val_info_path,
         out_dir=val_out_dir,
-        class_counts_path=val_class_counts_path,
     )
 
 

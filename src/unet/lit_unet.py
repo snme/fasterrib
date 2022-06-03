@@ -1,12 +1,13 @@
 import typing as t
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import seaborn as sns
 import torch
 from matplotlib.colors import LogNorm
-from sklearn.metrics import auc
+from sklearn import metrics
 from src.rfc_dataset import RFCDataset
 from src.unet.loss import MixedLoss
 from src.unet.unet import UNet
@@ -23,6 +24,7 @@ class LitUNet(pl.LightningModule):
         class_counts: t.Optional[torch.Tensor] = None,
         neg_dir=None,
         learning_rate=1e-6,
+        eval_roc=False,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -42,7 +44,7 @@ class LitUNet(pl.LightningModule):
         self.confusion_matrix = ConfusionMatrix(num_classes=self.hparams.num_classes)
         self.roc = ROC(num_classes=self.num_classes, compute_on_cpu=False)
         self.auroc = AUROC(
-            num_classes=self.num_classes, average="macro", compute_on_cpu=False
+            num_classes=self.num_classes, average=None, compute_on_cpu=False
         )
 
         if self.neg_dir:
@@ -148,9 +150,10 @@ class LitUNet(pl.LightningModule):
         self.f1(y_pred.flatten(), target.flatten())
         self.macro_f1(y_pred.flatten(), target.flatten())
 
-        # probs = softmax_out.permute(1, 0, 2, 3).flatten(start_dim=1).T
-        # self.roc(probs, target.flatten())
-        # self.auroc(probs, target.flatten())
+        if self.hparams.eval_roc:
+            probs = softmax_out.permute(1, 0, 2, 3).flatten(start_dim=1).T
+            self.roc(probs, target.flatten())
+            self.auroc(probs, target.flatten())
 
         return dice_scores, bin_dice
 
@@ -162,8 +165,6 @@ class LitUNet(pl.LightningModule):
         f1 = self.f1.compute()
         macro_f1 = self.macro_f1.compute()
         confmat = self.confusion_matrix.compute()
-        # roc = self.roc.compute()
-        # auc = self.auroc.compute()
 
         self.log("bin_dice", bin_dice, prog_bar=True)
         self.log("macro_f1", macro_f1, prog_bar=True)
@@ -174,7 +175,11 @@ class LitUNet(pl.LightningModule):
             prog_bar=False,
         )
 
-        # self.plot_roc(roc, auc)
+        if self.hparams.eval_roc:
+            roc = self.roc.compute()
+            auc = self.auroc.compute()
+            self.plot_roc(roc, auc)
+
         self.save_f1_plot(f1.unsqueeze(0).cpu().numpy()[:, 2:])
         self.save_dice_barplot(dice_scores.cpu().numpy()[:, 2:])
         self.save_confusion_matrix(confmat.cpu()[1:, 1:])
@@ -185,6 +190,7 @@ class LitUNet(pl.LightningModule):
         return logits
 
     def save_f1_plot(self, f1_scores):
+        plt.clf()
         data = pd.DataFrame(
             f1_scores,
             columns=["1", "2", "3", "4"],
@@ -197,6 +203,7 @@ class LitUNet(pl.LightningModule):
         plt.savefig("f1_barplot.png")
 
     def save_dice_barplot(self, dice_scores):
+        plt.clf()
         data = pd.DataFrame(
             dice_scores,
             columns=["1", "2", "3", "4"],
@@ -210,13 +217,12 @@ class LitUNet(pl.LightningModule):
 
     def save_confusion_matrix(self, confmat):
         plt.clf()
+
+        mask = np.zeros_like(confmat)
+        mask[0, 0] = 1
         with sns.axes_style("white"):
             ax = sns.heatmap(
-                confmat,
-                annot=True,
-                cmap="Blues",
-                fmt="g",
-                norm=LogNorm(),
+                confmat, annot=True, cmap="Blues", fmt=".3g", norm=LogNorm(), mask=None
             )
             ax.set_title("Confusion Matrix")
             ax.set_xlabel("Predicted Values")
@@ -227,22 +233,32 @@ class LitUNet(pl.LightningModule):
             ax.yaxis.set_ticklabels(["0", "1", "2", "3", "4"])
 
             ## Display the visualization of the Confusion Matrix.
-            plt.savefig("confmat.jpg")
+            plt.savefig("confmat.png")
 
     def plot_roc(self, roc, auc):
+        plt.clf()
         fpr, tpr, thresholds = roc
 
         auc = auc.cpu().numpy()
+
+        print("auc", auc)
 
         fpr = [x.cpu().numpy() for x in fpr]
         tpr = [x.cpu().numpy() for x in tpr]
         thresholds = [x.cpu().numpy() for x in thresholds]
 
-        plt.clf()
         for i in range(1, self.num_classes):
             f = fpr[i]
             t = tpr[i]
-            plt.plot(f, t, label=f"ROC curve {i - 1}")
+            J = t - f
+            best_thresh_i = np.argmax(J)
+            best_thresh = thresholds[i][best_thresh_i]
+            print(f"best_threshold_{i}", best_thresh)
+            plt.plot(
+                f,
+                t,
+                label=f"ROC {i - 1} (AUC={auc[i]:.3f})",
+            )
 
         plt.plot([0, 1], [0, 1], "k--")
         plt.xlim([-0.05, 1.0])

@@ -1,7 +1,4 @@
-import csv
 import gzip
-import typing as t
-from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -44,7 +41,6 @@ class RFCDataset(Dataset):
 
         return example
 
-    @lru_cache(maxsize=10)
     def load_data_file(self, i):
         (img, label) = torch.load(gzip.GzipFile(self.paths[i], "rb"))
         return (img, label)

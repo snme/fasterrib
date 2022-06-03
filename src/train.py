@@ -44,7 +44,8 @@ def train(data_loader, val_loader=None):
     wandb_logger = WandbLogger(project="ribfrac")
 
     checkpoint_dir = os.path.join(
-        dirname, f"../checkpoints-{datetime.now().strftime('%m%d-%H%M')}-ce-dice-weight"
+        dirname,
+        f"../checkpoints-{datetime.now().strftime('%m%d-%H%M')}-ce+bd+md+rw-0.5",
     )
 
     loss_callback = ModelCheckpoint(
