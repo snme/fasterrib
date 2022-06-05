@@ -133,16 +133,17 @@ class MixedLoss(nn.Module):
         )
 
     def get_focal_loss(self, input, target, weights=None):
-        ce = F.cross_entropy(
-            input, target, reduction="none", ignore_index=0, weight=weights
-        )
+        ce = F.cross_entropy(input, target, reduction="none", ignore_index=0)
 
         if weights is None:
             focal = torch.pow(1 - torch.exp(-ce), self.params.focal_gamma) * ce
             return focal.mean(dim=(1, 2))
 
-        focal = torch.pow(1 - torch.exp(-ce), self.params.focal_gamma) * ce
-        return focal.sum(dim=(1, 2)) / weights[target].sum(dim=(1, 2))
+        W = weights[target]
+        assert W.shape == target.shape
+
+        focal = W * torch.pow(1 - torch.exp(-ce), self.params.focal_gamma) * ce
+        return focal.sum(dim=(1, 2)) / W.sum(dim=(1, 2))
 
     def forward(self, input, target, class_counts: t.Optional[torch.Tensor] = None):
         softmax_input = self.get_softmax_scores(input)
@@ -152,7 +153,7 @@ class MixedLoss(nn.Module):
             weights = class_counts + 1
             weights = 1 / torch.pow(weights, self.params.reweight_factor)
             weights[0] = 0
-            weights = weights / weights.sum()
+            # weights = weights / weights.sum()
         else:
             weights = None
 
@@ -195,6 +196,12 @@ class MixedLoss(nn.Module):
         elif self.params.loss_fn == ELossFunction.FOCAL:
             focal_loss = self.get_focal_loss(input, target, weights)
             loss = self.params.focal_weight * focal_loss
+        elif self.params.loss_fn == ELossFunction.FOCAL_MD:
+            focal_loss = self.get_focal_loss(input, target, weights)
+            loss = (
+                self.params.focal_weight * focal_loss
+                + self.params.md_weight * multi_dice_loss
+            )
         elif self.params.loss_fn == ELossFunction.FOCAL_BD_MD:
             focal_loss = self.get_focal_loss(input, target, weights)
             loss = (

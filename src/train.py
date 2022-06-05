@@ -24,8 +24,6 @@ parser.add_argument(
 
 train_dir = os.path.join(dirname, "../data/ribfrac-challenge/training/")
 class_counts_path = os.path.join(train_dir, "class_counts.pt")
-batch_size = 8
-
 dirname = os.path.dirname(__file__)
 default_neg_dir = os.path.join(
     dirname, "../data/ribfrac-challenge/training/prepared/neg"
@@ -34,8 +32,8 @@ default_neg_dir = os.path.join(
 torch.cuda.empty_cache()
 
 
-def train(data_loader, val_loader=None):
-    model = LitUNet(params=HParams())
+def train(hparams, data_loader, val_loader=None):
+    model = LitUNet(params=hparams)
     model.train()
     model = model.to(device)
 
@@ -64,7 +62,7 @@ def train(data_loader, val_loader=None):
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=-1,
-        val_check_interval=300,
+        val_check_interval=1000,
         callbacks=[loss_callback, bin_dice_callback],
         max_epochs=100,
         logger=wandb_logger,
@@ -74,6 +72,8 @@ def train(data_loader, val_loader=None):
 
 
 def main():
+    hparams = HParams()
+
     data = RFCDataset(
         data_dir="./data/ribfrac-challenge/training/prepared/pos",
     )
@@ -91,17 +91,20 @@ def main():
 
     train_loader = DataLoader(
         data,
-        batch_size=batch_size,
+        batch_size=hparams.batch_size - hparams.neg_samples,
         num_workers=24,
         shuffle=True,
         persistent_workers=True,
     )
     val_loader = DataLoader(
-        val_data, batch_size=batch_size, num_workers=24, persistent_workers=True
+        val_data,
+        batch_size=hparams.batch_size,
+        num_workers=24,
+        persistent_workers=True,
     )
     print("Num training examples:", len(data))
     print("Num validation examples:", len(val_data))
-    train(train_loader, val_loader)
+    train(hparams, train_loader, val_loader)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,14 @@
 # ribfrac
 
-# Setup
+|                                      ![example model predictions](./assets//img_pred_label.png)                                       |
+| :-----------------------------------------------------------------------------------------------------------------------------------: |
+| <b>Figure 1: </b> A) An axial slice from a chest CT scan from the validation set. B) The model prediction. C) The ground-truth label. |
+
+# Intro
+
+This repo contains a [UNet](https://arxiv.org/abs/1505.04597) model for detecting and classifying rib fractures in chest CT scans. It is trained on the [RibFrac Grand Challenge](https://ribfrac.grand-challenge.org/) dataset. The model's input is a batch of 512x512 axial slices. See figure 1 for an example.
+
+## Setup
 
 ## Install Miniconda
 

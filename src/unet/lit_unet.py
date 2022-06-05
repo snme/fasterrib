@@ -14,7 +14,8 @@ from src.unet.loss import MixedLoss
 from src.unet.unet import UNet
 from torch import nn
 from torch.utils.data import DataLoader
-from torchmetrics import AUROC, ROC, ConfusionMatrix, F1Score
+from torchmetrics import AUROC, ROC, ConfusionMatrix, F1Score, MatthewsCorrCoef
+from torchmetrics import functional as metricsF
 
 
 class LitUNet(pl.LightningModule):
@@ -44,6 +45,7 @@ class LitUNet(pl.LightningModule):
         self.macro_f1 = F1Score(
             num_classes=self.hparams.num_classes, average="macro", ignore_index=0
         )
+        self.mcc = MatthewsCorrCoef(num_classes=self.params.num_classes)
         self.confusion_matrix = ConfusionMatrix(num_classes=self.hparams.num_classes)
         self.roc = ROC(num_classes=self.num_classes, compute_on_cpu=False)
         self.auroc = AUROC(
@@ -56,7 +58,7 @@ class LitUNet(pl.LightningModule):
             self.neg_loader = DataLoader(
                 self.neg_dataset,
                 shuffle=True,
-                batch_size=4,
+                batch_size=self.params.neg_samples,
                 persistent_workers=True,
                 num_workers=8,
             )
@@ -75,18 +77,39 @@ class LitUNet(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         img = batch["image"]
-        label = batch["label"]
+        target = batch["label"]
 
         # Negative sampling
         if self.neg_dir is not None:
             neg_batch = self.get_neg_samples()
             img = torch.cat([img, neg_batch["image"].to(img.get_device())], dim=0)
-            label = torch.cat([label, neg_batch["label"].to(img.get_device())], dim=0)
+            target = torch.cat([target, neg_batch["label"].to(img.get_device())], dim=0)
 
-        loss_fn = MixedLoss(params=self.params)
-
+        mixed_loss = MixedLoss(params=self.params)
         out = self.unet(img)
-        loss, dice, ce, bin_dice = loss_fn(out, label, class_counts=self.class_counts)
+
+        loss, dice, ce, bin_dice = mixed_loss(
+            out, target, class_counts=self.class_counts
+        )
+
+        softmax_out = mixed_loss.get_softmax_scores(out)
+        y_pred = torch.argmax(softmax_out, dim=1)
+        train_f1 = metricsF.f1_score(
+            y_pred.flatten(),
+            target.flatten(),
+            average="macro",
+            num_classes=6,
+            ignore_index=0,
+        )
+
+        y_mcc = y_pred[target != 0]
+        t_mcc = target[target != 0]
+        train_mcc = metricsF.matthews_corrcoef(
+            y_mcc.flatten(), t_mcc.flatten(), num_classes=6
+        )
+
+        self.log("train_macro_f1", train_f1, prog_bar=True)
+        self.log("train_mcc", train_mcc, prog_bar=True)
         self.log("train_loss", loss, prog_bar=True)
         self.log("train_ce", ce, prog_bar=True)
         self.log("train_binary_dice", bin_dice, prog_bar=True)

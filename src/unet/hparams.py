@@ -17,6 +17,7 @@ class ELossFunction(Enum):
     CE_MD = "CE_MD"
     CE_BD_MD = "CE_BD_MD"
     FOCAL = "FOCAL"
+    FOCAL_MD = "FOCAL_MD"
     FOCAL_BD_MD = "FOCAL_BD_MD"
 
 
@@ -27,11 +28,12 @@ class HParams(BaseModel):
     class_counts: t.Optional[t.List[int]] = default_class_counts
     neg_dir: t.Optional[str]
     learning_rate: float = 1e-6
-    batch_size: int = 8
+    batch_size: int = 14
+    neg_samples: int = 2
     loss_fn: ELossFunction = ELossFunction.CE_MD
     focal_gamma: float = 2
     focal_weight: float = 1
-    ce_weight: float = 100
-    bd_weight: float = 0
+    ce_weight: float = 10000
+    bd_weight: float = 1
     md_weight: float = 1
     reweight_factor: float = 0.5

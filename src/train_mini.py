@@ -8,6 +8,7 @@ from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import ConcatDataset, DataLoader, Subset
 
 from src.rfc_dataset import RFCDataset
+from src.unet.hparams import HParams
 from src.unet.lit_unet import LitUNet
 from src.unet.unet import UNet
 
@@ -24,13 +25,9 @@ torch.cuda.empty_cache()
 
 
 def train(data_loader):
-    class_counts = torch.load(class_counts_path)
-    class_counts.requires_grad_(False)
-    class_counts = class_counts.to(device)
-    model = LitUNet(class_counts=class_counts)
+    model = LitUNet(params=HParams())
     model.train()
     model = model.to(device)
-
     # train model
     checkpoint_callback = ModelCheckpoint(
         dirpath=os.path.join(dirname, f"../checkpoints-mini"),
@@ -56,7 +53,7 @@ def main():
         data,
         batch_size=batch_size,
         num_workers=24,
-        shuffle=True,
+        shuffle=False,
         persistent_workers=True,
     )
     print("Num training examples:", len(data))
