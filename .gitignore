@@ -11,3 +11,4 @@ checkpoints*/
 *.png
 *.jpg
 inference-results*/
+!assets/*
