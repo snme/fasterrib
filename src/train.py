@@ -33,7 +33,7 @@ torch.cuda.empty_cache()
 
 
 def train(hparams, data_loader, val_loader=None):
-    model = LitUNet(params=hparams)
+    model = LitUNet(params=hparams.dict())
     model.train()
     model = model.to(device)
 
