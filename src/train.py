@@ -41,7 +41,7 @@ def train(hparams, data_loader, val_loader=None):
 
     checkpoint_dir = os.path.join(
         dirname,
-        f"../checkpoints-{datetime.now().strftime('%m%d-%H%M')}-ce+bd+md+rw-0.5",
+        f"../checkpoints-{datetime.now().strftime('%m%d-%H%M')}",
     )
 
     loss_callback = ModelCheckpoint(
