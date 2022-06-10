@@ -26,14 +26,14 @@ class HParams(BaseModel):
     dec_chs: t.List[int] = (1024, 512, 256, 128, 64)
     num_classes: int = 6
     class_counts: t.Optional[t.List[int]] = default_class_counts
-    neg_dir: t.Optional[str]
+    neg_dir: t.Optional[str] = default_neg_dir
     learning_rate: float = 1e-6
-    batch_size: int = 14
+    batch_size: int = 12
     neg_samples: int = 2
     loss_fn: ELossFunction = ELossFunction.CE_MD
     focal_gamma: float = 2
     focal_weight: float = 1
-    ce_weight: float = 100
+    ce_weight: float = 1
     bd_weight: float = 1
     md_weight: float = 1
     reweight_factor: float = 0.5
