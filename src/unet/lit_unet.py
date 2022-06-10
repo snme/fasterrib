@@ -19,9 +19,9 @@ from torchmetrics import functional as metricsF
 
 
 class LitUNet(pl.LightningModule):
-    def __init__(self, params: HParams):
+    def __init__(self, params: t.Dict):
         super().__init__()
-        self.save_hyperparameters(params.dict())
+        self.save_hyperparameters(params)
 
         self.params = HParams.parse_obj(self.hparams)
 

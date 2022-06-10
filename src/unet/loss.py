@@ -106,7 +106,8 @@ class MixedLoss(nn.Module):
         )
         return dice
 
-    def get_softmax_scores(self, input):
+    @staticmethod
+    def get_softmax_scores(input):
         softmax_input = input.clone()
         softmax_input[:, 0] = float("-inf")
         softmax_input = F.softmax(softmax_input, dim=1)
