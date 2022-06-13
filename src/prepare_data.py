@@ -30,7 +30,7 @@ val_out_dir = os.path.join(val_dir, "prepared/")
 n_classes = 6
 
 
-def prepare_data(img_dir, label_dir, info_path, out_dir):
+def prepare_data(img_dir, label_dir, info_path, out_dir, split):
     pos_dir = os.path.join(out_dir, "pos")
     neg_dir = os.path.join(out_dir, "neg")
     os.makedirs(pos_dir, exist_ok=True)
@@ -48,6 +48,9 @@ def prepare_data(img_dir, label_dir, info_path, out_dir):
                 label_map[public_id] = {}
 
             label_map[public_id][label_id] = code
+
+    if split == 'train':
+        assert len(label_map) == 420
 
     img_paths = [path for path in Path(img_dir).glob("*-image.nii.gz")]
     img_paths.sort()
@@ -106,6 +109,7 @@ def prepare_train():
         label_dir=train_labels_dir,
         info_path=train_info_path,
         out_dir=train_out_dir,
+        split='train'
     )
 
 
@@ -116,6 +120,7 @@ def prepare_val():
         label_dir=val_labels_dir,
         info_path=val_info_path,
         out_dir=val_out_dir,
+        split='val'
     )
 
 
