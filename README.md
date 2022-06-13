@@ -62,15 +62,15 @@ data/
 
 ## Prepare the Data
 
-The next step after downloading the RFC data is to run the data preparation script:
+The next step is to run the data preparation script:
 
 ```bash
 python -m src.prepare_data --split all
 ```
 
-This will prepare and save each 2d slice of every image. The script takes about 1 hour on our desktop workstation.
+This will prepare and save each 2d slice of every scan. The script takes about 1 hour on our desktop workstation.
 
-Next, compute the class counts over the training set. These are used for class re-weighting during training.
+Once that's done, compute the class counts over the training set. These are used for class re-weighting during training.
 
 ```bash
 python -m src.get_class_counts
