@@ -35,13 +35,12 @@ data/
     training/
       ribfrac-train-info-all.csv
       images/
-        all/
-          RibFrac1-image.nii.gz
-          ...
+        RibFrac1-image.nii.gz
+        ...
+        RibFrac420-image.nii.gz
       labels/
-        all/
-          RibFrac1-label.nii.gz
-          ...
+        RibFrac1-label.nii.gz
+        ...
     validation/
       ribfrac-val-info.csv
       ribfrac-val-images/
