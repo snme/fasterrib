@@ -96,4 +96,4 @@ So far, we have achieved an ~88% binary DICE on the validation set after 5 train
 
 To get predictions at the fracture level instead of just the pixel level, we apply blob detection on the raw probabilities and results look as below. See the `data_exploration/eval.ipynb` for more details.
 
-[post-processingg for fracture dection](./assets/blob-detection.png)
+![post-processingg for fracture dection](./assets/blob-detection.png)
