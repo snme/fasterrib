@@ -8,7 +8,7 @@
 
 This repo contains a proof-of-concept [UNet](https://arxiv.org/abs/1505.04597) model for detecting and classifying rib fractures in chest CT scans. It is trained on the [RibFrac Grand Challenge](https://ribfrac.grand-challenge.org/) dataset. The model's input is a batch of 512x512 axial slices. See the figure above for an example.
 
-The model loss function is a weighted sum of three terms: the cross-entropy loss (CE), binary-DICE (BD) loss, and multi-DICE (MD) loss, where binary-DICE is the DICE for fracture vs. non-fracture classification, and multi-DICE is a simple average of the DICE scores for each non-background class. That is,
+The model loss function is a weighted sum of three terms: the cross-entropy loss (CE), binary-DICE (BD) loss, and multi-DICE (MD) loss, where binary-DICE is the [DICE](https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient) score for fracture vs. non-fracture classification, and multi-DICE is a simple average of the DICE scores for each non-background class. That is,
 
 $$
 L(y, \hat{y}) = w_{ce}\mathit{CE} - w_{bd}\log\mathit{BD} - w_{md}\log\mathit{MD}
