@@ -94,8 +94,6 @@ python -m src.infer --in-dir <scans-dir> --out-dir <predictions-dir> --checkpoin
 
 So far, we have achieved an ~88% binary DICE on the validation set after 5 training epochs. The binary DICE score highly depends on the value of the `bd_weight` hyperparamter (fracture vs non-fracture), and setting it too high interferes with classifying pixels into sub-types.
 
-To get predictions at the fracture level instead of just the pixel level, we apply blob detection on the raw probabilities and results look as in figure 2. See the `data_exploration/eval.ipynb` for more details.
+To get predictions at the fracture level instead of just the pixel level, we apply blob detection on the raw probabilities and results look as below. See the `data_exploration/eval.ipynb` for more details.
 
-|                           ![post-processingg for fracture dection](./assets/blob-detection.png)                           |
-| :-----------------------------------------------------------------------------------------------------------------------: |
-| <b>Figure 2: </b> To get fracture level predictions we threshold the model probabilities and apply simple blob detection. |
+[post-processingg for fracture dection](./assets/blob-detection.png)
