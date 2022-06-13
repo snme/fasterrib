@@ -6,7 +6,7 @@
 
 # Intro
 
-This repo contains a [UNet](https://arxiv.org/abs/1505.04597) model for detecting and classifying rib fractures in chest CT scans. It is trained on the [RibFrac Grand Challenge](https://ribfrac.grand-challenge.org/) dataset. The model's input is a batch of 512x512 axial slices. See figure 1 for an example.
+This repo contains a proof-of-concept [UNet](https://arxiv.org/abs/1505.04597) model for detecting and classifying rib fractures in chest CT scans. It is trained on the [RibFrac Grand Challenge](https://ribfrac.grand-challenge.org/) dataset. The model's input is a batch of 512x512 axial slices. See figure 1 for an example.
 
 ## Setup
 
@@ -67,14 +67,20 @@ Next, compute the class counts over the training set. These are used for class r
 python -m src.get_class_counts
 ```
 
-## Train
+## Training
 
 ```bash
 python -m src.train
 ```
+
+You can adjust hyperparameters in the file `src/unet/hparams.py`.
 
 ## Inference
 
 ```bash
 python -m src.infer --in-dir <scans-dir> --out-dir <predictions-dir> --checkpoint <checkpoint-path>
 ```
+
+## Preliminary Results
+
+We have achieved an ~88% binary DICE on the validation set after 5 training epochs. This is the soft DICE score for fracture vs non-fracture binary pixel classification. Binary DICE score highly depends on the value of the `bd_weight` hyperparamter (fracture vs non-fracture), and setting it too high interferes with classifying pixels into sub-types.
