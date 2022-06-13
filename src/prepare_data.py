@@ -64,7 +64,7 @@ def prepare_data(img_dir, label_dir, info_path, out_dir, split):
             yield (img_paths[i], label_paths[i], label_map, pos_dir, neg_dir)
 
     all_args = list(make_args())
-    process_map(prepare_img, all_args, max_workers=24)
+    process_map(prepare_img, all_args, max_workers=12)
 
 
 def prepare_img(args):
