@@ -6,9 +6,19 @@
 
 # Intro
 
-This repo contains a proof-of-concept [UNet](https://arxiv.org/abs/1505.04597) model for detecting and classifying rib fractures in chest CT scans. It is trained on the [RibFrac Grand Challenge](https://ribfrac.grand-challenge.org/) dataset. The model's input is a batch of 512x512 axial slices. See figure 1 for an example.
+This repo contains a proof-of-concept [UNet](https://arxiv.org/abs/1505.04597) model for detecting and classifying rib fractures in chest CT scans. It is trained on the [RibFrac Grand Challenge](https://ribfrac.grand-challenge.org/) dataset. The model's input is a batch of 512x512 axial slices. See the figure above for an example.
 
-## Setup
+The model loss function is a weighted sum of three terms: the cross-entropy loss (CE), binary-DICE (BD) loss, and multi-DICE (MD) loss, where binary-DICE is the DICE for fracture vs. non-fracture classification, and multi-DICE is a simple average of the DICE scores for each non-background class. That is,
+
+$$
+L(y, \hat{y}) = w_{ce}\mathit{CE} - w_{bd}\log\mathit{BD} - w_{md}\log\mathit{MD}
+$$
+
+where $y$ is the label and $\hat{y}$ is the prediction.
+
+The weights are hyperparameters and can be tuned by editing the `src/unet/hparams.py` file.
+
+# Setup
 
 ## Install Miniconda
 
@@ -20,14 +30,13 @@ If you don't already have `conda`, please find the install instructions [here](h
 conda env create -f env.yml
 ```
 
-## Download the data
+## Get the Data
 
 Download the RibFrac challenge training and validation data, then extract and move the files to
-a folder named `data/ribfrac-challenge` in the root of this repo. You will need to combine
-the `Part1/` and `Part2/` images and labels into single folders named `all/`, and combine the two train info `csv` files
-into a single file named `ribfrac-train-info-all.csv`.
+a folder named `data/ribfrac-challenge`. Please combine the `Part1/` and `Part2/` images and labels folders
+into one folder. Also concatenate the two training info `.csv` files into one file.
 
-The final folder structure should look as follows.
+The final folder structure should look like this:
 
 ```
 data/
@@ -51,7 +60,7 @@ data/
           ...
 ```
 
-## Prepare Data
+## Prepare the Data
 
 The next step after downloading the RFC data is to run the data preparation script:
 
@@ -83,4 +92,10 @@ python -m src.infer --in-dir <scans-dir> --out-dir <predictions-dir> --checkpoin
 
 ## Preliminary Results
 
-We have achieved an ~88% binary DICE on the validation set after 5 training epochs. This is the soft DICE score for fracture vs non-fracture binary pixel classification. Binary DICE score highly depends on the value of the `bd_weight` hyperparamter (fracture vs non-fracture), and setting it too high interferes with classifying pixels into sub-types.
+So far, we have achieved an ~88% binary DICE on the validation set after 5 training epochs. The binary DICE score highly depends on the value of the `bd_weight` hyperparamter (fracture vs non-fracture), and setting it too high interferes with classifying pixels into sub-types.
+
+To get predictions at the fracture level instead of just the pixel level, we apply blob detection on the raw probabilities and results look as in figure 2. See the `data_exploration/eval.ipynb` for more details.
+
+|                           ![post-processingg for fracture dection](./assets/blob-detection.png)                           |
+| :-----------------------------------------------------------------------------------------------------------------------: |
+| <b>Figure 2: </b> To get fracture level predictions we threshold the model probabilities and apply simple blob detection. |
