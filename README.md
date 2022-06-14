@@ -8,14 +8,14 @@
 
 This project is a proof-of-concept [UNet](https://arxiv.org/abs/1505.04597) model for detecting and classifying rib fractures in chest CT scans. It is trained on the [RibFrac Grand Challenge](https://ribfrac.grand-challenge.org/) dataset. The model's input is a 512x512 axial slice and it predicts one of five possible classes for each pixel. The label class codes are described in the table below. See the figure above for an example input slice, label, and prediction.
 
-| Label code | Description              |
-| ---------- | ------------------------ |
-| -1         | fracture of unknown type |
-| 0          | background               |
-| 1          | displaced fracture       |
-| 2          | non-displaced fracture   |
-| 3          | buckle fracture          |
-| 4          | segmental fracture       |
+| Label code | Description                        |
+| ---------- | ---------------------------------- |
+| -1         | fracture of unknown type (ignored) |
+| 0          | background                         |
+| 1          | displaced fracture                 |
+| 2          | non-displaced fracture             |
+| 3          | buckle fracture                    |
+| 4          | segmental fracture                 |
 
 # Loss function
 
