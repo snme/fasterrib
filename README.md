@@ -1,4 +1,4 @@
-# ribfrac
+# ribfrac: a deep learning model for rib fracture detection
 
 |                                      ![example model predictions](./assets//img_pred_label.png)                                       |
 | :-----------------------------------------------------------------------------------------------------------------------------------: |
@@ -6,9 +6,15 @@
 
 # Intro
 
-This repo contains a proof-of-concept [UNet](https://arxiv.org/abs/1505.04597) model for detecting and classifying rib fractures in chest CT scans. It is trained on the [RibFrac Grand Challenge](https://ribfrac.grand-challenge.org/) dataset. The model's input is a batch of 512x512 axial slices. See the figure above for an example.
+This project is a proof-of-concept [UNet](https://arxiv.org/abs/1505.04597) model for detecting and classifying rib fractures in chest CT scans. It is trained on the [RibFrac Grand Challenge](https://ribfrac.grand-challenge.org/) dataset. The model's input is a batch of 512x512 axial slices. See the figure above for an example.
 
-The model loss function is a weighted sum of three terms: the cross-entropy loss (CE), binary-DICE (BD) loss, and multi-DICE (MD) loss, where binary-DICE is the [DICE](https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient) score for fracture vs. non-fracture classification, and multi-DICE is a simple average of the DICE scores for each non-background class. That is,
+The model loss function is a weighted sum of three terms:
+
+1. the cross-entropy loss (CE)
+2. binary-DICE (BD) loss
+3. multi-DICE (MD) loss
+
+where binary-DICE is the [DICE](https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient) score for binary, fracture vs. non-fracture, classification, and multi-DICE is a simple average of the DICE scores for each non-background class. That is,
 
 $$
 L(y, \hat{y}) = w_{ce}\mathit{CE} - w_{bd}\log\mathit{BD} - w_{md}\log\mathit{MD}
@@ -16,7 +22,7 @@ $$
 
 where $y$ is the label and $\hat{y}$ is the prediction.
 
-The weights are hyperparameters and can be tuned by editing the `src/unet/hparams.py` file.
+The weights are hyperparameters which can be tuned by editing the `src/unet/hparams.py` file.
 
 # Setup
 
@@ -92,7 +98,7 @@ python -m src.infer --in-dir <scans-dir> --out-dir <predictions-dir> --checkpoin
 
 ## Preliminary Results
 
-So far, we have achieved an ~88% binary DICE on the validation set after 5 training epochs. The binary DICE score highly depends on the value of the `bd_weight` hyperparamter (fracture vs non-fracture), and setting it too high interferes with classifying pixels into sub-types.
+So far, we have achieved an ~88% binary DICE on the validation set after 5 training epochs. The binary DICE score highly depends on the value of the `bd_weight` hyperparameter (fracture vs non-fracture), and setting it too high interferes with classifying pixels into sub-types.
 
 To get predictions at the fracture level instead of just the pixel level, we apply blob detection on the raw probabilities and results look as below. See the `data_exploration/eval.ipynb` for more details.
 
