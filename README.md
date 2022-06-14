@@ -96,7 +96,7 @@ python -m src.get_class_counts
 ## Training
 
 ```bash
-python -m src.train
+python -m src.train --wandb-api-key [optional]
 ```
 
 You can adjust hyperparameters in the file `src/unet/hparams.py`.
