@@ -1,7 +1,7 @@
 #!/bin/sh
-#SBATCH --job-name=ribfrac-prepare-data
-#SBATCH --output=prepare-data-log.txt
-#SBATCH --error=prepare-data-err.txt
+#SBATCH --job-name=ribfrac-get-class-counts
+#SBATCH --output=get-class-counts-log.txt
+#SBATCH --error=get-class-counts-err.txt
 #SBATCH --time=4:00:00
 #SBATCH -p owners
 #SBATCH --nodes=1
