@@ -34,6 +34,6 @@ class HParams(BaseModel):
     focal_gamma: float = 2
     focal_weight: float = 1
     ce_weight: float = 1
-    bd_weight: float = 1
+    bd_weight: float = 10
     md_weight: float = 1
     reweight_factor: float = 0.5

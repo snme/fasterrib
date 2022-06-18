@@ -12,3 +12,5 @@ checkpoints*/
 *.jpg
 inference-results*/
 !assets/*
+*.txt
+!requirements*.txt
