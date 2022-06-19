@@ -11,6 +11,7 @@
 #SBATCH --mem=64GB
 #SBATCH -C GPU_MEM:24GB
 #SBATCH --gpus 1
+#SBATCH --mincpus=20
 
 set -eo pipefail
 
