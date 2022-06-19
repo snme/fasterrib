@@ -2,10 +2,10 @@
 #SBATCH --job-name=ribfrac-prepare-data
 #SBATCH --output=prepare-data-log.txt
 #SBATCH --error=prepare-data-err.txt
-#SBATCH --time=4:00:00
+#SBATCH --time=6:00:00
 #SBATCH -p owners
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=20
+#SBATCH --mincpus=24
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=davidwb
 #SBATCH --partition=normal

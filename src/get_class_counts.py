@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import ConcatDataset, DataLoader
 from tqdm import tqdm
 
+from src.config import NUM_CORES
 from src.rfc_dataset import RFCDataset
 
 parser = argparse.ArgumentParser(
@@ -23,7 +24,7 @@ def get_counts(prepared_dir: str, out_path: str):
     data_pos = RFCDataset(data_dir=os.path.join(prepared_dir, "pos/"))
     data_neg = RFCDataset(data_dir=os.path.join(prepared_dir, "neg/"))
     data = ConcatDataset([data_pos, data_neg])
-    data_loader = DataLoader(data, num_workers=24, batch_size=16)
+    data_loader = DataLoader(data, num_workers=NUM_CORES, batch_size=16)
 
     class_counts = torch.zeros((n_classes,), dtype=torch.long, device=device)
 

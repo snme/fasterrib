@@ -6,6 +6,10 @@
 sbatch ./scripts/prepare-data-sbatch.sh
 ```
 
+```bash
+sbatch ./scripts/get-class-counts-sbatch.sh
+```
+
 ## Train
 
 ```bash

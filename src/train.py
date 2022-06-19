@@ -8,6 +8,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import ConcatDataset, DataLoader, Subset
 
+from src.config import NUM_CORES
 from src.rfc_dataset import RFCDataset
 from src.unet.hparams import HParams
 from src.unet.lit_unet import LitUNet
@@ -92,14 +93,14 @@ def main():
     train_loader = DataLoader(
         data,
         batch_size=hparams.batch_size - hparams.neg_samples,
-        num_workers=24,
+        num_workers=NUM_CORES,
         shuffle=True,
         persistent_workers=True,
     )
     val_loader = DataLoader(
         val_data,
         batch_size=hparams.batch_size,
-        num_workers=24,
+        num_workers=NUM_CORES,
         persistent_workers=True,
     )
     print("Num training examples:", len(data))

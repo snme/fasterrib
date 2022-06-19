@@ -9,6 +9,8 @@ import numpy as np
 import torch
 from tqdm.contrib.concurrent import process_map
 
+from src.config import NUM_CORES
+
 parser = argparse.ArgumentParser(
     description="Prepares RibFrac Challenge images and labels for training and evaluation"
 )
@@ -49,7 +51,7 @@ def prepare_data(img_dir, label_dir, info_path, out_dir, split):
 
             label_map[public_id][label_id] = code
 
-    if split == 'train':
+    if split == "train":
         assert len(label_map) == 420
 
     img_paths = [path for path in Path(img_dir).glob("*-image.nii.gz")]
@@ -64,7 +66,7 @@ def prepare_data(img_dir, label_dir, info_path, out_dir, split):
             yield (img_paths[i], label_paths[i], label_map, pos_dir, neg_dir)
 
     all_args = list(make_args())
-    process_map(prepare_img, all_args, max_workers=12)
+    process_map(prepare_img, all_args, max_workers=NUM_CORES)
 
 
 def prepare_img(args):
@@ -109,7 +111,7 @@ def prepare_train():
         label_dir=train_labels_dir,
         info_path=train_info_path,
         out_dir=train_out_dir,
-        split='train'
+        split="train",
     )
 
 
@@ -120,7 +122,7 @@ def prepare_val():
         label_dir=val_labels_dir,
         info_path=val_info_path,
         out_dir=val_out_dir,
-        split='val'
+        split="val",
     )
 
 
