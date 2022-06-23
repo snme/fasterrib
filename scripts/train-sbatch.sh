@@ -3,7 +3,7 @@
 #SBATCH --output=train-log.txt
 #SBATCH --error=train-err.txt
 #SBATCH --time=12:00:00
-#SBATCH -p owners
+#SBATCH -p gpu
 #SBATCH --nodes=1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=davidwb
@@ -21,4 +21,6 @@ conda activate ribfrac
 echo "Working dir:" `pwd`
 echo "Training..."
 
-python -m src.train
+wandb login $WANDB_API_KEY
+
+python -m src.train --wandb-api-key $WANDB_API_KEY
