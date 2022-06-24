@@ -150,7 +150,7 @@ class MixedLoss(nn.Module):
         softmax_input = self.get_softmax_scores(input)
 
         # reweighting
-        if class_counts is not None:
+        if class_counts is not None and self.params.reweight_factor > 0:
             weights = class_counts + 1
             weights = 1 / torch.pow(weights, self.params.reweight_factor)
             weights[0] = 0

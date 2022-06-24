@@ -36,4 +36,4 @@ class HParams(BaseModel):
     ce_weight: float = 1
     bd_weight: float = 10
     md_weight: float = 1
-    reweight_factor: float = 0.5
+    reweight_factor: float = 0
