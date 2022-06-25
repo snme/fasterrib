@@ -2,7 +2,7 @@ import typing as t
 
 import torch
 import torch.nn.functional as F
-from src.unet.hparams import ELossFunction, HParams
+from src.unet.hparams import ELossFunction, ETask, HParams
 from torch import nn
 
 
@@ -146,7 +146,9 @@ class MixedLoss(nn.Module):
         focal = W * torch.pow(1 - torch.exp(-ce), self.params.focal_gamma) * ce
         return focal.sum(dim=(1, 2)) / W.sum(dim=(1, 2))
 
-    def forward(self, input, target, class_counts: t.Optional[torch.Tensor] = None):
+    def classification_forward(
+        self, input, target, class_counts: t.Optional[torch.Tensor] = None
+    ):
         softmax_input = self.get_softmax_scores(input)
 
         # reweighting
@@ -213,4 +215,71 @@ class MixedLoss(nn.Module):
         else:
             raise NotImplementedError()
 
-        return loss.mean(), multi_dice.mean(), ce_loss.mean(), binary_dice.mean()
+        return {
+            "loss": loss.mean(),
+            "multi_dice": multi_dice.mean(),
+            "ce_loss": ce_loss.mean(),
+            "binary_dice": binary_dice.mean(),
+        }
+
+    def detection_forward(
+        self, input, target, class_counts: t.Optional[torch.Tensor] = None
+    ):
+        softmax_input = self.get_softmax_scores(input)
+
+        target = target.clone()
+        target[target != 1] = 2
+
+        # reweighting
+        if class_counts is not None and self.params.reweight_factor > 0:
+            weights = torch.zeros_like(class_counts, device=target.get_device())
+            weights[1] += class_counts[1]
+            weights[2] += class_counts.sum() - class_counts[1]
+            weights = 1 / torch.pow(weights, self.params.reweight_factor)
+        else:
+            weights = None
+
+        # focal_loss = (torch.pow(1 - torch.exp(-ce), 2) * ce).sum(dim=(1, 2))
+
+        ce_loss = self.get_ce_loss(input, target, weights)
+
+        # DICE loss
+        # ignore class=1 since this corresponds to the background class.
+        target_one_hot = torch.nn.functional.one_hot(target, num_classes=6)
+        target_one_hot = target_one_hot.type(torch.int8).permute(0, 3, 1, 2)
+
+        binary_dice = self.get_binary_dice_score(
+            softmax_input, target, target_one_hot=target_one_hot
+        )
+
+        binary_dice_loss = -torch.log(binary_dice)
+
+        if self.params.loss_fn == ELossFunction.CE_BD_MD:
+            raise Exception("CE_BD_MD loss cannot be used when task is detection")
+        elif self.params.loss_fn == ELossFunction.CE_MD:
+            raise Exception("CE_MD loss cannot be used when task is detection")
+        elif self.params.loss_fn == ELossFunction.CE:
+            loss = self.params.ce_weight * ce_loss
+        elif self.params.loss_fn == ELossFunction.CE_BD:
+            loss = self.params.ce_weight * ce_loss + binary_dice_loss
+        elif self.params.loss_fn == ELossFunction.FOCAL:
+            focal_loss = self.get_focal_loss(input, target, weights)
+            loss = self.params.focal_weight * focal_loss
+        elif self.params.loss_fn == ELossFunction.FOCAL_MD:
+            raise Exception("FOCAL_MD loss cannot be used when task is detection")
+        elif self.params.loss_fn == ELossFunction.FOCAL_BD_MD:
+            raise Exception("FOCAL_BD_MD loss cannot be used when task is detection")
+        else:
+            raise NotImplementedError()
+
+        return {
+            "loss": loss.mean(),
+            "ce_loss": ce_loss.mean(),
+            "binary_dice": binary_dice.mean(),
+        }
+
+    def forward(self, input, target, class_counts: t.Optional[torch.Tensor] = None):
+        if self.params.task == ETask.CLASSICATION:
+            self.classification_forward(input, target, class_counts)
+        else:
+            self.detection_forward(input, target, class_counts)

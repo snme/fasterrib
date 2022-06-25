@@ -9,7 +9,7 @@ import torch
 from matplotlib.colors import LogNorm
 from sklearn import metrics
 from src.rfc_dataset import RFCDataset
-from src.unet.hparams import HParams
+from src.unet.hparams import ETask, HParams
 from src.unet.loss import MixedLoss
 from src.unet.unet import UNet
 from torch import nn
@@ -78,6 +78,8 @@ class LitUNet(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         img = batch["image"]
         target = batch["label"]
+        if self.params.task == ETask.DETECTION:
+            target[target != 1] = 2
 
         # Negative sampling
         if self.neg_dir is not None:
@@ -88,9 +90,13 @@ class LitUNet(pl.LightningModule):
         mixed_loss = MixedLoss(params=self.params)
         out = self.unet(img)
 
-        loss, dice, ce, bin_dice = mixed_loss(
-            out, target, class_counts=self.class_counts
-        )
+        losses = mixed_loss(out, target, class_counts=self.class_counts)
+        loss = losses["loss"]
+        ce = losses["ce_loss"]
+        bin_dice = loss["binary_dice"]
+
+        if self.params.task == ETask.CLASSIFICATION:
+            dice = losses["multi_dice"]
 
         softmax_out = mixed_loss.get_softmax_scores(out)
         y_pred = torch.argmax(softmax_out, dim=1)
@@ -113,7 +119,7 @@ class LitUNet(pl.LightningModule):
         self.log("train_loss", loss, prog_bar=True)
         self.log("train_ce", ce, prog_bar=True)
         self.log("train_binary_dice", bin_dice, prog_bar=True)
-        if not torch.isnan(dice):
+        if dice and not torch.isnan(dice):
             self.log("train_dice", dice, prog_bar=True)
 
         return loss
@@ -125,22 +131,20 @@ class LitUNet(pl.LightningModule):
         target = batch["label"]
         out = self.unet(img)
 
-        loss, dice, ce, bin_dice = mixed_loss(
-            out, target, class_counts=self.class_counts
-        )
+        losses = mixed_loss(out, target, class_counts=self.class_counts)
 
         softmax_out = mixed_loss.get_softmax_scores(out)
         y_pred = torch.argmax(softmax_out, dim=1)
         self.f1(y_pred.flatten(), target.flatten())
         self.macro_f1(y_pred.flatten(), target.flatten())
 
-        return loss, dice, ce, bin_dice
+        return losses
 
     def validation_epoch_end(self, outputs):
-        loss = torch.stack([x[0] for x in outputs]).mean()
-        dice = torch.stack([x[1] for x in outputs]).nanmean()
-        ce = torch.stack([x[2] for x in outputs]).mean()
-        bin_dice = torch.stack([x[3] for x in outputs], dim=0).nanmean()
+        loss = torch.stack([x["loss"] for x in outputs]).mean()
+        ce = torch.stack([x["ce_loss"] for x in outputs]).mean()
+        bin_dice = torch.stack([x["binary_dice"] for x in outputs], dim=0).nanmean()
+
         f1 = self.f1.compute()
         self.f1.reset()
 
@@ -148,16 +152,23 @@ class LitUNet(pl.LightningModule):
         self.macro_f1.reset()
 
         self.log("val_loss", loss, prog_bar=True)
-        self.log("val_dice", dice, prog_bar=True)
         self.log("val_bin_dice", bin_dice, prog_bar=True)
         self.log("val_ce", ce, prog_bar=True)
         self.log("f1", {str(i): c for (i, c) in enumerate(f1)}, prog_bar=False)
         self.log("macro_f1", macro_f1, prog_bar=False)
 
+        if self.params.task == ETask.CLASSIFICATION:
+            dice = torch.stack([x["multi_dice"] for x in outputs]).nanmean()
+            self.log("val_dice", dice, prog_bar=True)
+
     def test_step(self, batch, _):
         mixed_loss = MixedLoss(params=self.params)
         img = batch["image"]
         target = batch["label"]
+
+        if self.params.task == ETask.DETECTION:
+            target[target != 1] = 2
+
         out = self.unet(img)
         dice_scores = mixed_loss.get_all_dice_scores(out, target)
 
