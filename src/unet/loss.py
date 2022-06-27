@@ -261,7 +261,10 @@ class MixedLoss(nn.Module):
         elif self.params.loss_fn == ELossFunction.CE:
             loss = self.params.ce_weight * ce_loss
         elif self.params.loss_fn == ELossFunction.CE_BD:
-            loss = self.params.ce_weight * ce_loss + binary_dice_loss
+            loss = (
+                self.params.ce_weight * ce_loss
+                + self.params.bd_weight * binary_dice_loss
+            )
         elif self.params.loss_fn == ELossFunction.FOCAL:
             focal_loss = self.get_focal_loss(input, target, weights)
             loss = self.params.focal_weight * focal_loss
@@ -279,7 +282,7 @@ class MixedLoss(nn.Module):
         }
 
     def forward(self, input, target, class_counts: t.Optional[torch.Tensor] = None):
-        if self.params.task == ETask.CLASSICATION:
-            self.classification_forward(input, target, class_counts)
+        if self.params.task == ETask.CLASSIFICATION:
+            return self.classification_forward(input, target, class_counts)
         else:
-            self.detection_forward(input, target, class_counts)
+            return self.detection_forward(input, target, class_counts)

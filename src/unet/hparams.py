@@ -37,10 +37,10 @@ class HParams(BaseModel):
     learning_rate: float = 1e-6
     batch_size: int = 12
     neg_samples: int = 4
-    loss_fn: ELossFunction = ELossFunction.CE_BD_MD
+    loss_fn: ELossFunction = ELossFunction.CE_BD
     focal_gamma: float = 2
     focal_weight: float = 1
-    ce_weight: float = 10
-    bd_weight: float = 1
+    ce_weight: float = 1
+    bd_weight: float = 2
     md_weight: float = 1
     reweight_factor: float = 0
