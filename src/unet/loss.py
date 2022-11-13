@@ -7,6 +7,7 @@ from torch import nn
 
 
 def dice_score(input, target, pixel_mask=None):
+    print('dice score')
     smooth = 1.0
 
     iflat = input.flatten(start_dim=1)
@@ -33,6 +34,7 @@ def multiclass_dice(
     ignore_classes: t.Optional[t.List[int]] = None,
     weights=None,
 ):
+    print('multiclass dice')
     if ignore_classes is None:
         ignore_classes = []
 
@@ -70,6 +72,7 @@ class MixedLoss(nn.Module):
         self.params: HParams = params
 
     def get_class_dice_score(self, softmax_input, target_one_hot, class_):
+        print('class dice')
         pixel_mask = target_one_hot[:, 0] == 1
         dice = dice_score(
             softmax_input[:, class_], target_one_hot[:, class_], pixel_mask=pixel_mask
@@ -78,6 +81,7 @@ class MixedLoss(nn.Module):
         return dice
 
     def get_all_dice_scores(self, input, target):
+        print('all dice')
         target_one_hot = torch.nn.functional.one_hot(target, num_classes=6)
         target_one_hot = target_one_hot.type(torch.long).permute(0, 3, 1, 2)
         softmax_input = self.get_softmax_scores(input)
@@ -95,6 +99,7 @@ class MixedLoss(nn.Module):
         return torch.stack(scores)
 
     def get_binary_dice_score(self, softmax_input, target, target_one_hot):
+        print('binary dice')
         pixel_mask = target_one_hot[:, 0] == 1
 
         # Sum the non-background probabilities to get a 0/1 probability
@@ -124,6 +129,7 @@ class MixedLoss(nn.Module):
         return counts
 
     def get_ce_loss(self, input, target, weights=None):
+        print('ce loss')
         if weights is not None:
             return F.cross_entropy(
                 input, target, reduction="mean", ignore_index=0, weight=weights
@@ -134,6 +140,7 @@ class MixedLoss(nn.Module):
         )
 
     def get_focal_loss(self, input, target, weights=None):
+        print('focal loss')
         ce = F.cross_entropy(input, target, reduction="none", ignore_index=0)
 
         if weights is None:
@@ -147,6 +154,7 @@ class MixedLoss(nn.Module):
         return focal.sum(dim=(1, 2)) / W.sum(dim=(1, 2))
 
     def forward(self, input, target, class_counts: t.Optional[torch.Tensor] = None):
+        print('mixed forward')
         softmax_input = self.get_softmax_scores(input)
 
         # reweighting
@@ -213,4 +221,5 @@ class MixedLoss(nn.Module):
         else:
             raise NotImplementedError()
 
+        print('forward end')
         return loss.mean(), multi_dice.mean(), ce_loss.mean(), binary_dice.mean()

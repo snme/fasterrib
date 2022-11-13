@@ -8,6 +8,7 @@ import seaborn as sns
 import torch
 from matplotlib.colors import LogNorm
 from sklearn import metrics
+from src.config import NUM_CORES
 from src.rfc_dataset import RFCDataset
 from src.unet.hparams import HParams
 from src.unet.loss import MixedLoss
@@ -60,7 +61,7 @@ class LitUNet(pl.LightningModule):
                 shuffle=True,
                 batch_size=self.params.neg_samples,
                 persistent_workers=True,
-                num_workers=8,
+                num_workers=NUM_CORES,
             )
             self.neg_iter = iter(self.neg_loader)
 
@@ -82,8 +83,8 @@ class LitUNet(pl.LightningModule):
         # Negative sampling
         if self.neg_dir is not None:
             neg_batch = self.get_neg_samples()
-            img = torch.cat([img, neg_batch["image"].to(img.get_device())], dim=0)
-            target = torch.cat([target, neg_batch["label"].to(img.get_device())], dim=0)
+            img = torch.cat([img, neg_batch["image"]], dim=0)
+            target = torch.cat([target, neg_batch["label"]], dim=0)
 
         mixed_loss = MixedLoss(params=self.params)
         out = self.unet(img)
@@ -116,10 +117,12 @@ class LitUNet(pl.LightningModule):
         if not torch.isnan(dice):
             self.log("train_dice", dice, prog_bar=True)
 
+        print('training step')
         return loss
 
     def validation_step(self, batch, batch_idx):
         # this is the test loop
+        print('validation step')
         mixed_loss = MixedLoss(params=self.params)
         img = batch["image"]
         target = batch["label"]

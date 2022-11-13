@@ -16,4 +16,5 @@ class Block(nn.Module):
         )
 
     def forward(self, x):
+        print('block f')
         return self.block(x)

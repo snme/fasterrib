@@ -6,7 +6,7 @@ from black import Enum
 from pydantic import BaseModel
 
 dirname = os.path.dirname(__file__)
-train_dir = os.path.join(dirname, "../../data/ribfrac-challenge/training/")
+train_dir = os.path.join(dirname, "../data/ribfrac-challenge/training/")
 class_counts_path = os.path.join(train_dir, "class_counts.pt")
 default_neg_dir = os.path.join(train_dir, "prepared/neg")
 default_class_counts = torch.load(class_counts_path).numpy().tolist()

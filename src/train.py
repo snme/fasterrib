@@ -61,11 +61,12 @@ def train(hparams, data_loader, val_loader=None):
     )
 
     trainer = pl.Trainer(
-        accelerator="gpu",
-        devices=-1,
+        # accelerator="cpu",
+        # devices=NUM_CORES,
         val_check_interval=1000,
         callbacks=[loss_callback, bin_dice_callback],
         max_epochs=100,
+        strategy="ddp",
         logger=wandb_logger,
         detect_anomaly=True,
     )

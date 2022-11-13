@@ -43,7 +43,7 @@ class RFCDataset(Dataset):
 
     def load_data_file(self, i):
         (img, label) = torch.load(gzip.GzipFile(self.paths[i], "rb"))
-        return (img, label)
+        return (img, label.type(torch.LongTensor))
 
     def apply_transforms(self, img):
         for t in self.transforms:

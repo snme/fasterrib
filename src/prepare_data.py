@@ -8,6 +8,7 @@ import nibabel as nib
 import numpy as np
 import torch
 from tqdm.contrib.concurrent import process_map
+from tqdm import tqdm
 
 from src.config import NUM_CORES
 
@@ -70,22 +71,33 @@ def prepare_data(img_dir, label_dir, info_path, out_dir, split):
 
 
 def prepare_img(args):
+    print('hi there starting')
     img_path, label_path, label_map, pos_dir, neg_dir = args
     public_id = img_path.name.strip("-image.nii.gz")
 
+    print('parse args')
+
     img = nib.load(img_path).get_fdata().astype(np.float32)
 
+    print('image loaded')
+
     label = nib.load(label_path).get_fdata().astype(np.int8)
+    print('label loaded')
 
     assert label.shape == img.shape
 
     img = img.transpose(2, 0, 1)  # (slices, W, H)
+    print('transposed 1')
     label = label.transpose(2, 0, 1)  # (slices, W, H)
+
+    print('transposed 2')
 
     n_slices = img.shape[0]
 
     img = torch.as_tensor(img, dtype=torch.float32)
+    print('cast 1')
     label = torch.as_tensor(label, dtype=torch.long)
+    print('cast 2')
 
     # map all label ids to codes
     label = label.apply_(label_map[public_id].get)
@@ -96,7 +108,9 @@ def prepare_img(args):
 
     assert list(label.size()) == [n_slices, 512, 512]
 
-    for s in range(n_slices):
+    print('out path for each slice')
+
+    for s in tqdm(range(n_slices)):
         if torch.any(label[s] > 1).item():
             out_path = os.path.join(pos_dir, f"{public_id}_{s}.pt.gz")
         else:

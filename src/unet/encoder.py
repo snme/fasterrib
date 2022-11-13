@@ -11,6 +11,7 @@ class Encoder(nn.Module):
         self.pool = nn.MaxPool2d(2)
 
     def forward(self, x):
+        print('enc for')
         out = []
         for block in self.enc_blocks:
             x = block(x)
