@@ -6,6 +6,7 @@ import torch
 from torch.utils.data import Dataset
 
 from src.transforms import MinMaxNorm, Window
+from torchvision.models.detection import FasterRCNN_ResNet50_FPN_V2_Weights
 
 
 class ODDataset(Dataset):
@@ -24,8 +25,8 @@ class ODDataset(Dataset):
         print(self.__len__())
 
     def __len__(self):
+        # return 100
         return len(self.paths)
-
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
@@ -43,18 +44,40 @@ class ODDataset(Dataset):
 
             target['labels'][i] = label
 
+            # bounding boxes bug change.
+            b = target['boxes'][i]
+            target['boxes'][i] = torch.Tensor([b[1], b[0], b[3], b[2]])
+
+        if len(target['boxes']) == 0:
+            # (N, 4) shape expected
+            target['boxes'] = torch.zeros((0, 4))
+
         img = self.apply_transforms(img)
+
+        # convert to [0, 1]
+        img = (img - img.min()) / img.max()
 
         img = img[np.newaxis, :]
 
         target['image_id'] = idx
         target['labels'] = target['labels'].type(torch.int64)
+        target['labels'] = torch.ones(target['labels'].shape)
 
         return img, target
 
 
     def load_data_file(self, i):
-        img, target = torch.load(gzip.GzipFile(self.paths[i], "rb"))
+        try:
+            img, target = torch.load(gzip.GzipFile(self.paths[i], "rb"))
+        except Exception:
+            print('------------------------------------------------------------------- PROBLEM CHILD')
+            print(self.paths[i])
+            import time
+            with open('help.txt', 'a') as f:
+                f.write(str(self.paths[i]))
+            time.sleep(5)
+            raise Exception(str(self.paths[i]))
+            # cause error.
         return img, target
 
     def apply_transforms(self, img):

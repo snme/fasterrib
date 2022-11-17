@@ -86,7 +86,15 @@ def prepare_data(img_dir, label_dir, info_path, out_dir, split):
 def prepare_img(args):
     img_path, label_path, label_map, pos_dir, neg_dir, names_completed = args
     public_id = img_path.name.strip("-image.nii.gz")
-    if public_id in names_completed:
+
+    prefix = 'RibFrac'
+    nums = [52, 71, 93, 94, 355, 364, 385, 412,
+            413, 417, 418, 49, 57, 59, 62, 73,
+            74, 75, 78, 83, 84, 95, 96, 97, 99, 9]
+    labels = set([prefix + str(el) for el in nums])
+    print(labels)
+
+    if public_id not in labels: #public_id in names_completed:
         print(f'{public_id} skipped since already completed')
         return
 

@@ -205,6 +205,7 @@ def get_coco_api_from_dataset(dataset):
             dataset = dataset.dataset
     if isinstance(dataset, torchvision.datasets.CocoDetection):
         return dataset.coco
+    print('about to convert to coco api dataset')
     return convert_to_coco_api(dataset)
 
 
