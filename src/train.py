@@ -14,6 +14,8 @@ from src.unet.hparams import HParams
 from src.unet.lit_unet import LitUNet
 from src.unet.unet import UNet
 
+import torchvision.models.detection
+
 dirname = os.path.dirname(__file__)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using {device} device")
@@ -94,14 +96,14 @@ def main():
     train_loader = DataLoader(
         data,
         batch_size=hparams.batch_size - hparams.neg_samples,
-        num_workers=NUM_CORES,
+        num_workers=1, #NUM_CORES,
         shuffle=True,
         persistent_workers=True,
     )
     val_loader = DataLoader(
         val_data,
         batch_size=hparams.batch_size,
-        num_workers=NUM_CORES,
+        num_workers=1, #NUM_CORES,
         persistent_workers=True,
     )
     print("Num training examples:", len(data))

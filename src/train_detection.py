@@ -57,8 +57,6 @@ class predictor(nn.Module):
             nn.Linear(200, 4 * num_classes),
             nn.LeakyReLU()
         )
-        # self.cls_score = nn.Linear(in_channels, num_classes)
-        # self.bbox_pred = nn.Linear(in_channels, num_classes * 4)
 
     def forward(self, x):
         x = x.flatten(start_dim=1)
@@ -69,28 +67,24 @@ class predictor(nn.Module):
 
 def train(hparams, data_loader, val_loader=None):
     # 1e-4 is the best, thn 1e-3
-    for lr in [1e-5]:# 1e-3, 1e-4, 1e-2, 1e-5, 1e-6 # [1e-5, 1e-4, 1e-6, 1e-3, 1e-2, 1e-1]:
+    for lr in [1e-4]:# 1e-3, 1e-4, 1e-2, 1e-5, 1e-6 # [1e-5, 1e-4, 1e-6, 1e-3, 1e-2, 1e-1]:
         wandb.init()
         model = torchvision.models.detection.fasterrcnn_resnet50_fpn_v2(
                 weights='DEFAULT',
                 progress=True,
                 )
+
         in_features = model.roi_heads.box_predictor.cls_score.in_features
-        model.roi_heads.box_predictor = predictor(in_features, num_classes)# FastRCNNPredictor(in_features, num_classes)
+        model.roi_heads.box_predictor = predictor(in_features, num_classes)
+
 
         model.train()
         model = model.to(device)
-
-        # wandb_logger = WandbLogger(project="ribfrac")
 
         checkpoint_dir = os.path.join(
             dirname,
             f"../checkpoints/checkpoints-{datetime.now().strftime('%m%d-%H%M')}",
         )
-
-        # train model
-
-        # trainer.fit(model=model, train_dataloaders=data_loader, val_dataloaders=val_loader)
 
         # construct optimizer
         params = [p for p in model.parameters() if p.requires_grad]
@@ -103,16 +97,16 @@ def train(hparams, data_loader, val_loader=None):
                                                        gamma=0.1)
 
         num_epochs = 10
-        model = torch.load('final_deep_regressor.pkl') #checkpoints-1116-0102_epoch=1_lr=0.0001.pkl')
-        model = model.to(device)
+        # model = torch.load('final_deep_regressor.pkl') #checkpoints-1116-0102_epoch=1_lr=0.0001.pkl')
+        # model = model.to(device)
         print('Saving to', checkpoint_dir, 'absolute yolo')
         for epoch in tqdm(range(1, num_epochs)):
             # train for one epoch, printing every 10 iterations
             _, losses = train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10)
             # save model
-            should_save = True # epoch % 5 == 0 or epoch == num_epochs - 1
+            should_save = epoch % 2 == 0 or epoch == num_epochs - 1
             if should_save:
-                torch.save(model, f'{checkpoint_dir}_epoch={epoch}_lr={lr}.pkl')
+                torch.save(model, f'{checkpoint_dir}_epoch={epoch}_lr={lr}_152.pkl')
             # torch.save(torch.Tensor(losses), f'{checkpoint_dir}_epoch={epoch}_lr={lr}_overfit_losses.pkl')
             # update the learning rate
             lr_scheduler.step()
@@ -120,7 +114,6 @@ def train(hparams, data_loader, val_loader=None):
             evaluate(model, val_loader, device=device, to_print=should_save)
 
         wandb.finish()
-
 
     print("That's it!")
 
@@ -144,31 +137,22 @@ def main():
     val_neg = ODDataset(
         data_dir="./data/ribfrac-challenge/validation/prepared/od-c-neg",
     )
-    val_pos_subset = Subset(val_pos, torch.randperm(len(val_pos))[:400]) #2000
-    val_neg_subset = Subset(val_neg, torch.randperm(len(val_neg))[:400]) #2000
+    val_pos_subset = Subset(val_pos, torch.randperm(len(val_pos))[:100]) #2000
+    val_neg_subset = Subset(val_neg, torch.randperm(len(val_neg))[:100]) #2000
     val_data = ConcatDataset([val_pos_subset, val_neg_subset])
 
     train_loader = DataLoader(
         data,
-        batch_size=7, #hparams.batch_size - hparams.neg_samples,
+        batch_size=2, #hparams.batch_size - hparams.neg_samples,
         num_workers=NUM_CORES,
         shuffle=True,
         persistent_workers=True,
         collate_fn=collate_fn,
     )
 
-    '''val_loader = DataLoader(
-        pos_data,
-        batch_size=7, #hparams.batch_size - hparams.neg_samples,
-        num_workers=NUM_CORES,
-        shuffle=True,
-        persistent_workers=True,
-        collate_fn=collate_fn,
-    )'''
-
     val_loader = DataLoader(
         val_data,
-        batch_size=7, #hparams.batch_size,
+        batch_size=2, #hparams.batch_size,
         num_workers=NUM_CORES,
         persistent_workers=True,
         collate_fn=collate_fn,

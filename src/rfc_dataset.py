@@ -30,14 +30,22 @@ class RFCDataset(Dataset):
 
         img, label = self.load_data_file(idx)
 
-        assert label.min() >= 0
-        assert label.min() <= 5
+        # right now, labels are 2-5. let's "merge" background and unknown fractures.
+        # then, fractures are from 1-4
+        for i in range(len(label)):
+            label[i] = max(0, label[i] - 1)
+
+        assert label >= 0
+        assert label <= 4
 
         img = self.apply_transforms(img)
 
         img = img[np.newaxis, :]
 
-        example = {"image": img, "label": label}
+        # sclae image to [0, 1]
+        img = (img - img.min()) / img.max()
+
+        example = {"image": img, "label": label.type(torch.int64)}
 
         return example
 

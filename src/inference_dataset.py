@@ -31,7 +31,8 @@ class InferenceDataset(Dataset):
         img = nib.load(self.paths[idx]).get_fdata().astype(np.float32)
         img = self.apply_transforms(img)
         img = torch.Tensor(img).permute(2, 0, 1)  # (SLICES, H, W)
-
+        img = torch.flip(img, (2, 1))
+        img = (img - img.min(axis=0).values) / img.max(axis=0).values
         return img, basename
 
     def apply_transforms(self, img):

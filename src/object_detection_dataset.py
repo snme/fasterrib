@@ -61,6 +61,8 @@ class ODDataset(Dataset):
 
         target['image_id'] = idx
         target['labels'] = target['labels'].type(torch.int64)
+
+        # model does not distinguish between fractures at the prediction/training stage.
         target['labels'] = torch.ones(target['labels'].shape)
 
         return img, target
