@@ -1,4 +1,5 @@
 # A deep learning model for rib fracture detection
+## README below was for V1 of the model, not the current one, and is thus a WIP
 
 |                                      ![example model predictions](./assets//img_pred_label.png)                                       |
 | :-----------------------------------------------------------------------------------------------------------------------------------: |
